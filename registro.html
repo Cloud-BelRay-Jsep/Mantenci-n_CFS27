@@ -51,6 +51,12 @@
 const EXEC_URL = "https://script.google.com/macros/s/AKfycbykGQqZZNtE6Pes9N8dwLH_2XeTr3zB_F8Ddz0ypWHoHwPX-wuMvlpe8BBXHXHy-yJA/exec";
 const CAPTURA_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA3xg-NepBQFQy3QwQoRINx_AIP_-_ie2Clpq0lLLe56Fm1FokEW4A5VwTwiY13nYtXsBJQKde8wM/pub?gid=1096962834&single=true&output=csv";
 
+// Llave secreta para autorizar el teléfono central. Cámbiala por algo tuyo.
+// Para autorizar un teléfono UNA VEZ, abre en ese teléfono:
+//   registro.html?setup=belray-mm-2026
+const DEVICE_KEY = "belray-mm-2026";
+const AUTH_STORAGE = "belray_device_auth";
+
 const params = new URLSearchParams(window.location.search);
 const nombre = (params.get("nombre")||"").trim();
 const apellido = (params.get("apellido")||"").trim();
@@ -174,6 +180,28 @@ async function mostrarMenu(){
 }
 
 async function procesar(){
+  // ── MODO SETUP: autoriza este teléfono como central ──
+  const setupKey = params.get("setup");
+  if (setupKey) {
+    if (setupKey === DEVICE_KEY) {
+      localStorage.setItem(AUTH_STORAGE, "1");
+      app.innerHTML = `
+        <div class="circle" style="background:#132819;color:#3FB950">✓</div>
+        <div class="tag">Dispositivo autorizado</div>
+        <div class="sub" style="margin-top:10px">Este teléfono ya puede registrar entradas y salidas.</div>
+      `;
+    } else {
+      mostrarError("Llave de configuración incorrecta.");
+    }
+    return;
+  }
+
+  // ── VERIFICA que este teléfono esté autorizado ──
+  if (localStorage.getItem(AUTH_STORAGE) !== "1") {
+    mostrarError("Dispositivo no autorizado. Usa el teléfono central designado para el registro.");
+    return;
+  }
+
   if (!nombre || !tipo) { mostrarError("Llavero sin datos válidos."); return; }
 
   if (tipo === "entrada" && !ot) {
