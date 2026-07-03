@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro NFC</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:#0B1220; color:#E8EDF6;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .wrap{max-width:380px; width:100%; text-align:center}
+  .circle{
+    width:70px; height:70px; border-radius:50%; margin:0 auto 18px;
+    display:flex; align-items:center; justify-content:center; font-size:30px;
+  }
+  .spin{
+    width:40px; height:40px; border:3px solid #243049; border-top-color:#4FD1C5;
+    border-radius:50%; margin:0 auto 18px; animation:spin 0.9s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .tag{font-size:12px; color:#8A97AD; text-transform:uppercase; letter-spacing:1.5px}
+  .persona{font-size:24px; font-weight:600; margin-top:8px}
+  .sub{font-size:14px; color:#8A97AD; margin-top:6px}
+  .hora{font-size:40px; font-weight:700; margin-top:14px; font-variant-numeric:tabular-nums}
+  .wait{font-size:12px; color:#5E6B82; margin-top:22px}
+  .ot-item{
+    display:block; text-decoration:none; background:#131C2E; border:1px solid #243049;
+    border-radius:10px; padding:12px 14px; margin-bottom:8px; text-align:left; cursor:pointer;
+  }
+  .ot-item.crit{border-color:#F0616D}
+  .ot-title{font-size:15px; color:#E8EDF6; font-weight:600}
+  .ot-badge{color:#F0616D; font-size:10px; font-weight:700; margin-left:6px}
+  .ot-sub{font-size:12px; color:#8A97AD; margin-top:2px}
+  .ot-av{font-size:12px; color:#5E6B82; margin-top:2px}
+  .error{color:#F0616D; font-size:14px; margin-top:10px}
+</style>
+</head>
+<body>
+  <div class="wrap" id="app">
+    <div class="spin"></div>
+    <div class="tag">Procesando…</div>
+  </div>
+
+<script>
+// ============================================================
+//  CONFIGURACIÓN — tu URL de Apps Script (base, sin parámetros)
+// ============================================================
+const EXEC_URL = "https://script.google.com/macros/s/AKfycbykGQqZZNtE6Pes9N8dwLH_2XeTr3zB_F8Ddz0ypWHoHwPX-wuMvlpe8BBXHXHy-yJA/exec";
+const CAPTURA_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA3xg-NepBQFQy3QwQoRINx_AIP_-_ie2Clpq0lLLe56Fm1FokEW4A5VwTwiY13nYtXsBJQKde8wM/pub?gid=1096962834&single=true&output=csv";
+
+const params = new URLSearchParams(window.location.search);
+const nombre = (params.get("nombre")||"").trim();
+const apellido = (params.get("apellido")||"").trim();
+const tipo = (params.get("tipo")||"").trim().toLowerCase();
+const ot = (params.get("ot")||"").trim();
+const persona = (nombre + " " + apellido).trim();
+const app = document.getElementById("app");
+
+function horaAhora(){
+  return new Date().toLocaleTimeString("es-CL",{timeZone:"America/Santiago",hour:"2-digit",minute:"2-digit"});
+}
+
+async function llamarExec(qs){
+  // no-cors: no podemos leer la respuesta, pero la petición SÍ llega y se ejecuta en el servidor
+  try {
+    await fetch(EXEC_URL + qs, {mode:"no-cors", cache:"no-store"});
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+function parseLinea(linea){
+  const res=[]; let cur=""; let dentro=false;
+  for(let i=0;i<linea.length;i++){
+    const ch=linea[i];
+    if(ch==='"'){ dentro=!dentro; }
+    else if(ch===',' && !dentro){ res.push(cur); cur=""; }
+    else cur+=ch;
+  }
+  res.push(cur);
+  return res.map(s=>s.trim());
+}
+
+async function leerOTs(){
+  const res = await fetch(CAPTURA_CSV_URL + "&_=" + Date.now());
+  const texto = await res.text();
+  const lineas = texto.split("\n").filter(l=>l.trim());
+  let headerIdx = 0;
+  for(let i=0;i<Math.min(5,lineas.length);i++){
+    const cols = parseLinea(lineas[i]).map(c=>c.trim().toLowerCase());
+    if(cols.some(c=>c.includes("equipo"))){ headerIdx = i; break; }
+  }
+  const headers = parseLinea(lineas[headerIdx]).map(h=>h.trim().toLowerCase());
+  const idx = {
+    equipo: headers.findIndex(h=>h.includes("equipo")),
+    ot: headers.findIndex(h=>h==="ot"),
+    actividad: headers.findIndex(h=>h.includes("actividad")),
+    avance: headers.findIndex(h=>h.includes("avance")),
+    criticidad: headers.findIndex(h=>h.includes("criticidad")),
+  };
+  const vistos={}, ots=[];
+  for(let i=headerIdx+1;i<lineas.length;i++){
+    const c = parseLinea(lineas[i]);
+    const otVal = (c[idx.ot]||"").trim();
+    if(!otVal || vistos[otVal]) continue;
+    vistos[otVal]=true;
+    ots.push({
+      ot: otVal, equipo:c[idx.equipo]||"", actividad:c[idx.actividad]||"",
+      avance: parseInt(String(c[idx.avance]).replace(/[^0-9]/g,""))||0,
+      critica: String(c[idx.criticidad]||"").toLowerCase().includes("alta")
+    });
+  }
+  return ots;
+}
+
+function mostrarConfirmacion(tipoR, sub, extra){
+  const esEnt = tipoR === "entrada";
+  const color = esEnt ? "#3FB950" : "#F0616D";
+  const bg = esEnt ? "#132819" : "#2A1216";
+  const icono = esEnt ? "▼" : "▲";
+  const titulo = esEnt ? "Entrada registrada" : "Salida registrada";
+  app.innerHTML = `
+    <div class="circle" style="background:${bg};color:${color}">${icono}</div>
+    <div class="tag">${titulo}</div>
+    <div class="persona">${persona}</div>
+    ${sub ? `<div class="sub">${sub}</div>` : ""}
+    ${extra ? `<div class="sub">${extra}</div>` : ""}
+    <div class="hora" style="color:${color}">${horaAhora()}</div>
+    <div class="wait">Listo · acerca otro llavero cuando quieras</div>
+  `;
+}
+
+function mostrarError(msg){
+  app.innerHTML = `
+    <div class="circle" style="background:#2A1216;color:#F0616D">✕</div>
+    <div class="error">${msg}</div>
+  `;
+}
+
+async function mostrarMenu(){
+  app.innerHTML = `
+    <div class="tag">Entrada · elige tu OT</div>
+    <div class="persona" style="margin-bottom:16px">${persona}</div>
+    <div id="lista"><div class="spin"></div></div>
+  `;
+  try {
+    const ots = await leerOTs();
+    const lista = document.getElementById("lista");
+    if (!ots.length) { lista.innerHTML = '<div class="error">No hay OTs cargadas.</div>'; return; }
+    lista.innerHTML = ots.map(o => `
+      <a class="ot-item ${o.critica?'crit':''}" data-ot="${o.ot}">
+        <div class="ot-title">OT ${o.ot} ${o.critica?'<span class="ot-badge">CRÍTICA</span>':''}</div>
+        <div class="ot-sub">${o.equipo} · ${o.actividad}</div>
+        <div class="ot-av">Avance actual: ${o.avance}%</div>
+      </a>
+    `).join("");
+    lista.querySelectorAll(".ot-item").forEach(el=>{
+      el.addEventListener("click", async ()=>{
+        const otSel = el.getAttribute("data-ot");
+        app.innerHTML = '<div class="spin"></div><div class="tag">Registrando…</div>';
+        const qs = `?nombre=${encodeURIComponent(nombre)}&apellido=${encodeURIComponent(apellido)}&tipo=entrada&ot=${encodeURIComponent(otSel)}`;
+        const ok = await llamarExec(qs);
+        if (ok) mostrarConfirmacion("entrada", "OT " + otSel, "");
+        else mostrarError("No se pudo conectar con el servidor. Revisa tu conexión a internet e intenta de nuevo.");
+      });
+    });
+  } catch(e) {
+    mostrarError("No se pudo cargar la lista de OTs. Revisa tu conexión.");
+  }
+}
+
+async function procesar(){
+  if (!nombre || !tipo) { mostrarError("Llavero sin datos válidos."); return; }
+
+  if (tipo === "entrada" && !ot) {
+    await mostrarMenu();
+    return;
+  }
+
+  if (tipo === "entrada" && ot) {
+    const qs = `?nombre=${encodeURIComponent(nombre)}&apellido=${encodeURIComponent(apellido)}&tipo=entrada&ot=${encodeURIComponent(ot)}`;
+    const ok = await llamarExec(qs);
+    if (ok) mostrarConfirmacion("entrada", "OT " + ot, "");
+    else mostrarError("No se pudo conectar con el servidor. Revisa tu conexión a internet e intenta de nuevo.");
+    return;
+  }
+
+  if (tipo === "salida") {
+    const qs = `?nombre=${encodeURIComponent(nombre)}&apellido=${encodeURIComponent(apellido)}&tipo=salida`;
+    const ok = await llamarExec(qs);
+    if (ok) mostrarConfirmacion("salida", "", "");
+    else mostrarError("No se pudo conectar con el servidor. Revisa tu conexión a internet e intenta de nuevo.");
+    return;
+  }
+
+  mostrarError("Parámetros no reconocidos.");
+}
+
+procesar();
+</script>
+</body>
+</html>
