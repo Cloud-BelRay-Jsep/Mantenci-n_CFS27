@@ -21,7 +21,9 @@
     padding:24px; min-height:100vh;
   }
   .top{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:22px}
-  .brand{display:flex; flex-direction:column; gap:4px}
+  .brand{display:flex; align-items:center; gap:16px}
+  .brand-logo{height:52px; width:auto; flex-shrink:0}
+  .brand-text{display:flex; flex-direction:column; gap:4px}
   .brand .tag{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px}
   .brand h1{font-size:30px; font-weight:700}
   .brand .sub{font-size:14px; color:var(--muted)}
@@ -103,9 +105,12 @@
 <body>
   <div class="top">
     <div class="brand">
-      <span class="tag">Panel de Actividad · Bel-Ray</span>
-      <h1 id="tituloOT">Cargando…</h1>
-      <span class="sub" id="subOT">Anglo American Los Bronces</span>
+      <img class="brand-logo" src="logo-belray.png" alt="Bel-Ray">
+      <div class="brand-text">
+        <span class="tag">Panel de Actividad · Bel-Ray</span>
+        <h1 id="tituloOT">Cargando…</h1>
+        <span class="sub" id="subOT">Anglo American Los Bronces</span>
+      </div>
     </div>
     <div class="status">
       <div class="live"><span class="dot"></span> EN VIVO</div>
