@@ -138,7 +138,11 @@ async function cargarCaptura(){
   const idx = {
     equipo: headers.findIndex(h=>h.includes("equipo")),
     ot: headers.findIndex(h=>h==="ot"),
-    actividad: headers.findIndex(h=>h.includes("actividad")),
+    actividad: (function(){
+      let i = headers.findIndex(h=>h==="actividad");
+      if(i<0) i = headers.findIndex(h=>h.includes("actividad") && h!=="tipo actividad");
+      return i;
+    })(),
     avance: headers.findIndex(h=>h.includes("avance")),
     hrs: headers.findIndex(h=>h.includes("hrs")||h.includes("total")),
     estado: headers.findIndex(h=>h==="estado"),
@@ -352,4 +356,4 @@ tick(); setInterval(tick,1000);
 cargarTodo(); setInterval(cargarTodo, REFRESH_MS);
 </script>
 </body>
-</html> 
+</html>
