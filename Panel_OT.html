@@ -31,8 +31,12 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
   .clock{font-variant-numeric:tabular-nums; font-size:16px; color:var(--text)}
 
-  .layout{display:grid; grid-template-columns:340px 1fr; gap:22px}
-  @media(max-width:900px){.layout{grid-template-columns:1fr}}
+  .layout{display:grid; grid-template-columns:300px 1fr 360px; gap:18px; height:calc(100vh - 150px)}
+  @media(max-width:1100px){.layout{grid-template-columns:1fr; height:auto}}
+  .col{display:flex; flex-direction:column; min-height:0}
+  .col-scroll{overflow-y:auto; flex:1; padding-right:4px}
+  .col-scroll::-webkit-scrollbar{width:6px}
+  .col-scroll::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px}
 
   .hero{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:26px; text-align:center}
   .ring-wrap{position:relative; width:200px; height:200px; margin:0 auto 18px}
@@ -52,26 +56,39 @@
 
   .section-title{font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:0 0 12px}
 
-  .act-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:10px}
-  .act-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px}
-  .act-name{font-size:15px; font-weight:600}
-  .act-resp{font-size:12px; color:var(--dim)}
-  .act-pct{font-size:18px; font-weight:700; font-variant-numeric:tabular-nums}
-  .bar{height:9px; background:var(--panel2); border-radius:6px; overflow:hidden}
+  .act-card{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:11px 14px; margin-bottom:7px}
+  .act-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; gap:8px}
+  .act-name{font-size:13.5px; font-weight:600}
+  .act-resp{font-size:11px; color:var(--dim)}
+  .act-pct{font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; flex-shrink:0}
+  .bar{height:7px; background:var(--panel2); border-radius:6px; overflow:hidden}
   .bar-fill{height:100%; border-radius:6px; transition:width 0.6s ease}
   .fill-ok{background:var(--verde)} .fill-warn{background:var(--ambar)} .fill-crit{background:var(--rojo)}
-  .act-pill{font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:14px; margin-left:8px}
+  .act-pill{font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:12px; margin-left:6px}
 
-  .persona-row{display:flex; align-items:center; gap:14px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 16px; margin-bottom:8px}
+  .persona-row{display:flex; flex-direction:column; gap:6px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-bottom:7px}
   .persona-row.activo{border-color:var(--verde)}
-  .p-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0}
+  .p-head{display:flex; align-items:center; gap:8px}
+  .p-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0}
   .p-dot.on{background:var(--verde); animation:pulse 2s infinite}
   .p-dot.off{background:var(--dim)}
-  .p-nombre{font-size:15px; font-weight:600; flex:1}
-  .p-horas{display:flex; gap:16px; font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums}
+  .p-nombre{font-size:13.5px; font-weight:600; flex:1}
+  .p-horas{display:flex; gap:12px; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; padding-left:16px}
   .p-horas .h-in{color:var(--verde)}
   .p-horas .h-out{color:var(--rojo)}
-  .p-dur{font-size:12px; color:var(--dim); background:var(--panel2); padding:3px 10px; border-radius:10px}
+  .p-dur{font-size:11px; color:var(--dim); background:var(--panel2); padding:2px 8px; border-radius:10px}
+
+  .hero{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; text-align:center}
+  .ring-wrap{position:relative; width:150px; height:150px; margin:0 auto 12px}
+  .ring-pct .num{font-size:34px; font-weight:800; font-variant-numeric:tabular-nums}
+  .hero-stats{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px}
+  .hstat{background:var(--panel2); border-radius:9px; padding:8px}
+  .hstat .v{font-size:17px; font-weight:700}
+  .hstat .l{font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.3px; margin-top:1px}
+  .metrics{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:12px}
+  .metric{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:11px}
+  .metric .v{font-size:21px; font-weight:700; font-variant-numeric:tabular-nums}
+  .metric .l{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.3px; margin-top:1px}
 
   .empty{color:var(--dim); text-align:center; padding:30px; font-size:14px}
   .footer{margin-top:24px; text-align:center; font-size:11px; color:var(--dim)}
@@ -243,10 +260,10 @@ function render(actividades, personas){
 
   document.getElementById("contenido").innerHTML = `
     <div class="layout">
-      <div>
+      <div class="col">
         <div class="hero">
           <div class="ring-wrap">
-            <svg width="200" height="200" viewBox="0 0 200 200">
+            <svg width="100%" height="100%" viewBox="0 0 200 200">
               <circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--panel2)" stroke-width="14"/>
               <circle cx="100" cy="100" r="${R}" fill="none" stroke="${col}" stroke-width="14"
                 stroke-dasharray="${C}" stroke-dashoffset="${off}" stroke-linecap="round"
@@ -274,8 +291,9 @@ function render(actividades, personas){
         </div>
       </div>
 
-      <div>
+      <div class="col">
         <div class="section-title">Desglose de actividades</div>
+        <div class="col-scroll">
         ${actividades.map(a=>{
           const n = nivel(a.avance);
           const c = colorNivel(n);
@@ -291,24 +309,31 @@ function render(actividades, personas){
               <span class="act-pct" style="color:${c}">${a.avance}%</span>
             </div>
             ${a.resp ? `<div class="act-resp">${a.resp}</div>` : ""}
-            <div class="bar" style="margin-top:8px"><div class="bar-fill fill-${n}" style="width:${a.avance}%"></div></div>
-            ${a.bloqueado ? `<div style="margin-top:8px;font-size:12px;color:var(--ambar)">⚠ ${a.bloqueado}</div>` : ""}
+            <div class="bar" style="margin-top:6px"><div class="bar-fill fill-${n}" style="width:${a.avance}%"></div></div>
+            ${a.bloqueado ? `<div style="margin-top:6px;font-size:11px;color:var(--ambar)">⚠ ${a.bloqueado}</div>` : ""}
           </div>`;
         }).join("")}
+        </div>
+      </div>
 
-        <div class="section-title" style="margin-top:26px">Personas en el punto</div>
+      <div class="col">
+        <div class="section-title">Personas en el punto</div>
+        <div class="col-scroll">
         ${personasOT.length===0 ? '<div class="empty">Nadie ha registrado entrada en esta OT todavía.</div>' :
           personasOT.map(p=>`
           <div class="persona-row ${p.estado==='en terreno'?'activo':''}">
-            <span class="p-dot ${p.estado==='en terreno'?'on':'off'}"></span>
-            <span class="p-nombre">${p.persona}</span>
+            <div class="p-head">
+              <span class="p-dot ${p.estado==='en terreno'?'on':'off'}"></span>
+              <span class="p-nombre">${p.persona}</span>
+              ${p.dur ? `<span class="p-dur">${p.dur}</span>` : ""}
+            </div>
             <span class="p-horas">
               <span class="h-in">▼ ${p.hEnt||'—'}</span>
               <span class="h-out">${p.hSal ? '▲ '+p.hSal : (p.estado==='en terreno'?'En terreno':'—')}</span>
             </span>
-            ${p.dur ? `<span class="p-dur">${p.dur}</span>` : ""}
           </div>
         `).join("")}
+        </div>
       </div>
     </div>
   `;
