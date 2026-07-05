@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel OT · Bel-Ray — Anglo American Los Bronces</title>
+<style>
+  :root{
+    --bg:#0B1220; --panel:#131C2E; --panel2:#1A2438; --line:#243049;
+    --text:#E8EDF6; --muted:#8A97AD; --dim:#5E6B82;
+    --verde:#3FB950; --verdeBg:#132819;
+    --ambar:#E3A008; --ambarBg:#2A2109;
+    --rojo:#F0616D; --rojoBg:#2A1216;
+    --azul:#3B82F6; --azulBg:#0E1D33;
+    --acento:#4FD1C5;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    padding:24px; min-height:100vh;
+  }
+  .top{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:22px}
+  .brand{display:flex; flex-direction:column; gap:4px}
+  .brand .tag{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px}
+  .brand h1{font-size:30px; font-weight:700}
+  .brand .sub{font-size:14px; color:var(--muted)}
+  .status{display:flex; align-items:center; gap:18px; font-size:13px; color:var(--muted)}
+  .live{display:flex; align-items:center; gap:6px}
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--verde); animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  .clock{font-variant-numeric:tabular-nums; font-size:16px; color:var(--text)}
+
+  .layout{display:grid; grid-template-columns:340px 1fr; gap:22px}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+  .hero{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:26px; text-align:center}
+  .ring-wrap{position:relative; width:200px; height:200px; margin:0 auto 18px}
+  .ring-pct{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column}
+  .ring-pct .num{font-size:44px; font-weight:800; font-variant-numeric:tabular-nums}
+  .ring-pct .lbl{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:2px}
+  .hero-stats{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px}
+  .hstat{background:var(--panel2); border-radius:10px; padding:10px}
+  .hstat .v{font-size:20px; font-weight:700}
+  .hstat .l{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px}
+  .pill-estado{display:inline-block; margin-top:14px; font-size:12px; font-weight:700; padding:5px 14px; border-radius:20px}
+
+  .metrics{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:16px}
+  .metric{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px}
+  .metric .v{font-size:26px; font-weight:700; font-variant-numeric:tabular-nums}
+  .metric .l{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px}
+
+  .section-title{font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:0 0 12px}
+
+  .act-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:10px}
+  .act-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px}
+  .act-name{font-size:15px; font-weight:600}
+  .act-resp{font-size:12px; color:var(--dim)}
+  .act-pct{font-size:18px; font-weight:700; font-variant-numeric:tabular-nums}
+  .bar{height:9px; background:var(--panel2); border-radius:6px; overflow:hidden}
+  .bar-fill{height:100%; border-radius:6px; transition:width 0.6s ease}
+  .fill-ok{background:var(--verde)} .fill-warn{background:var(--ambar)} .fill-crit{background:var(--rojo)}
+  .act-pill{font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:14px; margin-left:8px}
+
+  .persona-row{display:flex; align-items:center; gap:14px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 16px; margin-bottom:8px}
+  .persona-row.activo{border-color:var(--verde)}
+  .p-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0}
+  .p-dot.on{background:var(--verde); animation:pulse 2s infinite}
+  .p-dot.off{background:var(--dim)}
+  .p-nombre{font-size:15px; font-weight:600; flex:1}
+  .p-horas{display:flex; gap:16px; font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums}
+  .p-horas .h-in{color:var(--verde)}
+  .p-horas .h-out{color:var(--rojo)}
+  .p-dur{font-size:12px; color:var(--dim); background:var(--panel2); padding:3px 10px; border-radius:10px}
+
+  .empty{color:var(--dim); text-align:center; padding:30px; font-size:14px}
+  .footer{margin-top:24px; text-align:center; font-size:11px; color:var(--dim)}
+
+  .selector{max-width:640px; margin:60px auto}
+  .ot-pick{display:block; text-decoration:none; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:10px}
+  .ot-pick:hover{border-color:var(--acento)}
+  .ot-pick .n{font-size:16px; font-weight:600}
+  .ot-pick .s{font-size:12px; color:var(--muted); margin-top:2px}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">
+      <span class="tag">Panel de Actividad · Bel-Ray</span>
+      <h1 id="tituloOT">Cargando…</h1>
+      <span class="sub" id="subOT">Anglo American Los Bronces</span>
+    </div>
+    <div class="status">
+      <div class="live"><span class="dot"></span> EN VIVO</div>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </div>
+
+  <div id="contenido">
+    <div class="empty">Cargando datos…</div>
+  </div>
+
+  <div class="footer" id="footer">Última actualización: — · Se refresca cada 20 segundos</div>
+
+<script>
+const CAPTURA_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA3xg-NepBQFQy3QwQoRINx_AIP_-_ie2Clpq0lLLe56Fm1FokEW4A5VwTwiY13nYtXsBJQKde8wM/pub?gid=1096962834&single=true&output=csv";
+const NFC_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA3xg-NepBQFQy3QwQoRINx_AIP_-_ie2Clpq0lLLe56Fm1FokEW4A5VwTwiY13nYtXsBJQKde8wM/pub?gid=545760247&single=true&output=csv";
+const REFRESH_MS = 20000;
+
+const params = new URLSearchParams(window.location.search);
+const OT_SELECCIONADA = (params.get("ot") || "").trim();
+
+function parseLinea(linea){
+  const res=[]; let cur=""; let dentro=false;
+  for(let i=0;i<linea.length;i++){
+    const ch=linea[i];
+    if(ch==='"'){ dentro=!dentro; }
+    else if(ch===',' && !dentro){ res.push(cur); cur=""; }
+    else cur+=ch;
+  }
+  res.push(cur);
+  return res.map(s=>s.trim());
+}
+function encontrarHeader(lineas, clave){
+  for(let i=0;i<Math.min(5,lineas.length);i++){
+    const cols = parseLinea(lineas[i]).map(c=>c.trim().toLowerCase());
+    if(cols.some(c=>c.includes(clave))) return i;
+  }
+  return 0;
+}
+
+async function cargarCaptura(){
+  const res = await fetch(CAPTURA_CSV_URL + "&_=" + Date.now());
+  const texto = await res.text();
+  const lineas = texto.split("\n").filter(l=>l.trim());
+  const hIdx = encontrarHeader(lineas, "equipo");
+  const headers = parseLinea(lineas[hIdx]).map(h=>h.trim().toLowerCase());
+  const idx = {
+    equipo: headers.findIndex(h=>h.includes("equipo")),
+    ot: headers.findIndex(h=>h==="ot"),
+    actividad: headers.findIndex(h=>h.includes("actividad")),
+    avance: headers.findIndex(h=>h.includes("avance")),
+    hrs: headers.findIndex(h=>h.includes("hrs")||h.includes("total")),
+    estado: headers.findIndex(h=>h==="estado"),
+    resp: headers.findIndex(h=>h.includes("auxiliar")),
+    criticidad: headers.findIndex(h=>h.includes("criticidad")),
+    bloqueado: headers.findIndex(h=>h.includes("bloqueado")),
+  };
+  const filas = [];
+  for(let i=hIdx+1;i<lineas.length;i++){
+    const c = parseLinea(lineas[i]);
+    if(!c[idx.equipo] || !c[idx.equipo].trim()) continue;
+    filas.push({
+      equipo:c[idx.equipo]||"", ot:(c[idx.ot]||"").trim(), actividad:c[idx.actividad]||"",
+      avance:parseInt(String(c[idx.avance]).replace(/[^0-9]/g,""))||0,
+      hrs:parseFloat(c[idx.hrs])||0, estado:c[idx.estado]||"",
+      resp:c[idx.resp]||"", criticidad:c[idx.criticidad]||"",
+      bloqueado: idx.bloqueado>=0 ? (c[idx.bloqueado]||"") : ""
+    });
+  }
+  return filas;
+}
+
+async function cargarNFC(){
+  const res = await fetch(NFC_CSV_URL + "&_=" + Date.now());
+  const texto = await res.text();
+  const lineas = texto.split("\n").filter(l=>l.trim());
+  if(!lineas.length) return [];
+  const hIdx = encontrarHeader(lineas, "persona");
+  const headers = parseLinea(lineas[hIdx]).map(h=>h.trim().toLowerCase());
+  const idx = {
+    persona: headers.findIndex(h=>h.includes("persona")),
+    ot: headers.findIndex(h=>h==="ot"),
+    fecha: headers.findIndex(h=>h.includes("fecha")),
+    hEnt: headers.findIndex(h=>h.includes("entrada")),
+    hSal: headers.findIndex(h=>h.includes("salida")),
+    dur: headers.findIndex(h=>h.includes("duraci")),
+    estado: headers.findIndex(h=>h.includes("estado")),
+  };
+  const res2 = [];
+  for(let i=hIdx+1;i<lineas.length;i++){
+    const c = parseLinea(lineas[i]);
+    if(!c[idx.persona]) continue;
+    res2.push({
+      persona:c[idx.persona]||"", ot:(c[idx.ot]||"").trim(), fecha:c[idx.fecha]||"",
+      hEnt:c[idx.hEnt]||"", hSal:c[idx.hSal]||"", dur:c[idx.dur]||"",
+      estado:(c[idx.estado]||"").toLowerCase()
+    });
+  }
+  return res2;
+}
+
+function nivel(av){ if(av>=100) return "ok"; if(av<50) return "crit"; return "warn"; }
+function colorNivel(nv){ return nv==="ok"?"var(--verde)":(nv==="crit"?"var(--rojo)":"var(--ambar)"); }
+
+function renderSelector(otsUnicas){
+  document.getElementById("tituloOT").textContent = "Selecciona una OT";
+  document.getElementById("subOT").textContent = "Elige qué actividad mostrar en este panel";
+  const cont = document.getElementById("contenido");
+  if(!otsUnicas.length){ cont.innerHTML = '<div class="empty">No hay OTs cargadas en CAPTURA.</div>'; return; }
+  cont.innerHTML = `<div class="selector">` + otsUnicas.map(o=>`
+    <a class="ot-pick" href="?ot=${encodeURIComponent(o.ot)}">
+      <div class="n">OT ${o.ot} — ${o.equipo}</div>
+      <div class="s">${o.actividad} · ${o.avance}%</div>
+    </a>
+  `).join("") + `</div>`;
+}
+
+function render(actividades, personas){
+  const eq = actividades[0].equipo;
+  document.getElementById("tituloOT").textContent = "OT " + OT_SELECCIONADA;
+  document.getElementById("subOT").textContent = eq + " · Anglo American Los Bronces";
+
+  const hrsTot = actividades.reduce((s,a)=>s+a.hrs,0);
+  const avanceGlobal = hrsTot>0 ? Math.round(actividades.reduce((s,a)=>s+a.avance*a.hrs,0)/hrsTot) : 0;
+  const nv = nivel(avanceGlobal);
+  const col = colorNivel(nv);
+  const completas = actividades.filter(a=>a.avance>=100).length;
+  const bloqueadas = actividades.filter(a=>a.bloqueado).length;
+  const estadoTxt = bloqueadas>0 ? "BLOQUEADO" : (avanceGlobal>=100?"COMPLETADA":(avanceGlobal===0?"SIN INICIAR":"EN PROCESO"));
+  const estadoBg = nv==="ok"?"var(--verdeBg)":(nv==="crit"?"var(--rojoBg)":"var(--ambarBg)");
+
+  const R=80, C=2*Math.PI*R, off = C - (avanceGlobal/100)*C;
+
+  const personasOT = personas.filter(p=>p.ot===OT_SELECCIONADA)
+    .sort((a,b)=> (b.hEnt||"").localeCompare(a.hEnt||""));
+  const enTerreno = personasOT.filter(p=>p.estado==="en terreno");
+  const unicas = new Set(personasOT.map(p=>p.persona)).size;
+  const finalizadas = personasOT.filter(p=>p.dur);
+  let promDur = "—";
+  if(finalizadas.length){
+    const mins = finalizadas.map(p=>{
+      const m = p.dur.match(/(\d+)h\s*(\d+)m/);
+      return m ? parseInt(m[1])*60+parseInt(m[2]) : 0;
+    });
+    const avgM = Math.round(mins.reduce((a,b)=>a+b,0)/mins.length);
+    promDur = Math.floor(avgM/60)+"h "+(avgM%60)+"m";
+  }
+
+  document.getElementById("contenido").innerHTML = `
+    <div class="layout">
+      <div>
+        <div class="hero">
+          <div class="ring-wrap">
+            <svg width="200" height="200" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--panel2)" stroke-width="14"/>
+              <circle cx="100" cy="100" r="${R}" fill="none" stroke="${col}" stroke-width="14"
+                stroke-dasharray="${C}" stroke-dashoffset="${off}" stroke-linecap="round"
+                transform="rotate(-90 100 100)" style="transition:stroke-dashoffset 0.8s ease"/>
+            </svg>
+            <div class="ring-pct">
+              <div class="num" style="color:${col}">${avanceGlobal}%</div>
+              <div class="lbl">Avance</div>
+            </div>
+          </div>
+          <span class="pill-estado" style="background:${estadoBg};color:${col}">${estadoTxt}</span>
+          <div class="hero-stats">
+            <div class="hstat"><div class="v">${actividades.length}</div><div class="l">Actividades</div></div>
+            <div class="hstat"><div class="v">${completas}/${actividades.length}</div><div class="l">Completadas</div></div>
+            <div class="hstat"><div class="v">${hrsTot}</div><div class="l">Hrs estimadas</div></div>
+            <div class="hstat"><div class="v">${bloqueadas}</div><div class="l">Bloqueadas</div></div>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><div class="v" style="color:var(--verde)">${enTerreno.length}</div><div class="l">En terreno ahora</div></div>
+          <div class="metric"><div class="v">${unicas}</div><div class="l">Personas distintas</div></div>
+          <div class="metric"><div class="v">${personasOT.length}</div><div class="l">Entradas totales</div></div>
+          <div class="metric"><div class="v">${promDur}</div><div class="l">Duración promedio</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Desglose de actividades</div>
+        ${actividades.map(a=>{
+          const n = nivel(a.avance);
+          const c = colorNivel(n);
+          const pillBg = a.bloqueado ? "var(--ambarBg)" : (n==="ok"?"var(--verdeBg)":(n==="crit"?"var(--rojoBg)":"var(--ambarBg)"));
+          const pillTxt = a.bloqueado ? "BLOQUEADA" : a.estado.toUpperCase();
+          return `
+          <div class="act-card">
+            <div class="act-top">
+              <div>
+                <span class="act-name">${a.actividad}</span>
+                <span class="act-pill" style="background:${pillBg};color:${c}">${pillTxt}</span>
+              </div>
+              <span class="act-pct" style="color:${c}">${a.avance}%</span>
+            </div>
+            ${a.resp ? `<div class="act-resp">${a.resp}</div>` : ""}
+            <div class="bar" style="margin-top:8px"><div class="bar-fill fill-${n}" style="width:${a.avance}%"></div></div>
+            ${a.bloqueado ? `<div style="margin-top:8px;font-size:12px;color:var(--ambar)">⚠ ${a.bloqueado}</div>` : ""}
+          </div>`;
+        }).join("")}
+
+        <div class="section-title" style="margin-top:26px">Personas en el punto</div>
+        ${personasOT.length===0 ? '<div class="empty">Nadie ha registrado entrada en esta OT todavía.</div>' :
+          personasOT.map(p=>`
+          <div class="persona-row ${p.estado==='en terreno'?'activo':''}">
+            <span class="p-dot ${p.estado==='en terreno'?'on':'off'}"></span>
+            <span class="p-nombre">${p.persona}</span>
+            <span class="p-horas">
+              <span class="h-in">▼ ${p.hEnt||'—'}</span>
+              <span class="h-out">${p.hSal ? '▲ '+p.hSal : (p.estado==='en terreno'?'En terreno':'—')}</span>
+            </span>
+            ${p.dur ? `<span class="p-dur">${p.dur}</span>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+async function cargarTodo(){
+  try{
+    const [captura, nfc] = await Promise.all([cargarCaptura(), cargarNFC()]);
+
+    if(!OT_SELECCIONADA){
+      const vistas={}, otsUnicas=[];
+      captura.forEach(a=>{
+        if(vistas[a.ot]) return; vistas[a.ot]=true;
+        otsUnicas.push(a);
+      });
+      renderSelector(otsUnicas);
+      actualizarFooter("selector de OT");
+      return;
+    }
+
+    const actividades = captura.filter(a=>a.ot===OT_SELECCIONADA);
+    if(!actividades.length){
+      document.getElementById("tituloOT").textContent = "OT " + OT_SELECCIONADA;
+      document.getElementById("contenido").innerHTML = '<div class="empty">No se encontraron actividades para esta OT en CAPTURA.</div>';
+      actualizarFooter("sin datos para esta OT");
+      return;
+    }
+    render(actividades, nfc);
+    actualizarFooter("en vivo");
+  }catch(e){
+    document.getElementById("contenido").innerHTML = '<div class="empty">Error de conexión. Reintentando…</div>';
+    actualizarFooter("error de conexión");
+  }
+}
+
+function actualizarFooter(fuente){
+  const ahora = new Date().toLocaleTimeString("es-CL",{timeZone:"America/Santiago"});
+  document.getElementById("footer").textContent = `Última actualización: ${ahora} · Fuente: ${fuente} · Se refresca cada 20 segundos`;
+}
+function tick(){
+  document.getElementById("clock").textContent = new Date().toLocaleTimeString("es-CL",{timeZone:"America/Santiago"});
+}
+
+tick(); setInterval(tick,1000);
+cargarTodo(); setInterval(cargarTodo, REFRESH_MS);
+</script>
+</body>
+</html>
