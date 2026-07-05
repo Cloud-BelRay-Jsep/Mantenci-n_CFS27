@@ -234,14 +234,19 @@ async function cargarSheet(){
 function parseNFC(texto){
   const lineas = texto.split("\n").filter(l=>l.trim());
   if(!lineas.length) return [];
-  const headers = parseLinea(lineas[0]).map(h=>h.trim().toLowerCase());
+  let headerIdx = 0;
+  for(let i=0;i<Math.min(5,lineas.length);i++){
+    const cols = parseLinea(lineas[i]).map(c=>c.trim().toLowerCase());
+    if(cols.some(c=>c.includes("persona"))){ headerIdx = i; break; }
+  }
+  const headers = parseLinea(lineas[headerIdx]).map(h=>h.trim().toLowerCase());
   const idx = {
     persona: headers.findIndex(h=>h.includes("persona")),
     ot: headers.findIndex(h=>h==="ot"),
     estado: headers.findIndex(h=>h.includes("estado")),
   };
   const res = [];
-  for(let i=1;i<lineas.length;i++){
+  for(let i=headerIdx+1;i<lineas.length;i++){
     const c = parseLinea(lineas[i]);
     if(!c[idx.persona]) continue;
     res.push({
@@ -253,23 +258,34 @@ function parseNFC(texto){
   return res;
 }
 
-// Parser CSV → filtra solo críticas. Ajusta los nombres de columna a tu Sheet.
+// Parser CSV → filtra solo críticas. Busca la fila de encabezados real
+// (tu Sheet tiene un título en la fila 1, los headers están en la fila 2).
 function parseCSV(texto){
   const lineas = texto.split("\n").filter(l=>l.trim());
-  const headers = parseLinea(lineas[0]).map(h=>h.trim().toLowerCase());
+  // Busca entre las primeras 5 líneas la que contenga "equipo" → esa es el header real
+  let headerIdx = 0;
+  for(let i=0;i<Math.min(5,lineas.length);i++){
+    const cols = parseLinea(lineas[i]).map(c=>c.trim().toLowerCase());
+    if(cols.some(c=>c.includes("equipo"))){ headerIdx = i; break; }
+  }
+  const headers = parseLinea(lineas[headerIdx]).map(h=>h.trim().toLowerCase());
   const idx = {
     equipo: headers.findIndex(h=>h.includes("equipo")),
     ot: headers.findIndex(h=>h==="ot"),
-    actividad: headers.findIndex(h=>h.includes("actividad")),
+    actividad: (function(){
+      let i = headers.findIndex(h=>h==="actividad");
+      if(i<0) i = headers.findIndex(h=>h.includes("actividad") && h!=="tipo actividad");
+      return i;
+    })(),
     avance: headers.findIndex(h=>h.includes("avance")),
     hrs: headers.findIndex(h=>h.includes("hrs")||h.includes("total")),
     criticidad: headers.findIndex(h=>h.includes("criticidad")),
     bloqueado: headers.findIndex(h=>h.includes("bloqueado")),
   };
   const filas = [];
-  for(let i=1;i<lineas.length;i++){
+  for(let i=headerIdx+1;i<lineas.length;i++){
     const c = parseLinea(lineas[i]);
-    if(!c[idx.equipo]) continue;
+    if(!c[idx.equipo] || !c[idx.equipo].trim()) continue;
     // SOLO críticas
     if(idx.criticidad>=0 && !String(c[idx.criticidad]).toLowerCase().includes("alta")) continue;
     filas.push({
@@ -314,4 +330,3 @@ cargarSheet(); setInterval(cargarSheet, REFRESH_MS);
 </script>
 </body>
 </html>
-
