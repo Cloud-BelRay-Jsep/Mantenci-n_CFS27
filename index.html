@@ -280,7 +280,7 @@ function parseCSV(texto){
     avance: headers.findIndex(h=>h.includes("avance")),
     hrs: headers.findIndex(h=>h.includes("hrs")||h.includes("total")),
     criticidad: headers.findIndex(h=>h.includes("criticidad")),
-    bloqueado: headers.findIndex(h=>h.includes("bloqueado")),
+    bloqueado: headers.findIndex(h=>h.includes("bloqueado")||h.includes("pausado")),
   };
   const filas = [];
   for(let i=headerIdx+1;i<lineas.length;i++){
@@ -329,4 +329,4 @@ tick(); setInterval(tick, 1000);
 cargarSheet(); setInterval(cargarSheet, REFRESH_MS);
 </script>
 </body>
-</html>
+</html> 
