@@ -170,7 +170,7 @@ async function cargarCaptura(){
     estado: headers.findIndex(h=>h==="estado"),
     resp: headers.findIndex(h=>h.includes("auxiliar")),
     criticidad: headers.findIndex(h=>h.includes("criticidad")),
-    bloqueado: headers.findIndex(h=>h.includes("bloqueado")),
+    bloqueado: headers.findIndex(h=>h.includes("bloqueado")||h.includes("pausado")),
   };
   const filas = [];
   for(let i=hIdx+1;i<lineas.length;i++){
@@ -344,6 +344,8 @@ function render(actividades, personas){
   `;
 }
 
+let huboRenderExitoso = false;
+
 async function cargarTodo(){
   try{
     const [captura, nfc] = await Promise.all([cargarCaptura(), cargarNFC()]);
@@ -355,6 +357,7 @@ async function cargarTodo(){
         otsUnicas.push(a);
       });
       renderSelector(otsUnicas);
+      huboRenderExitoso = true;
       actualizarFooter("selector de OT");
       return;
     }
@@ -367,10 +370,15 @@ async function cargarTodo(){
       return;
     }
     render(actividades, nfc);
+    huboRenderExitoso = true;
     actualizarFooter("en vivo");
   }catch(e){
-    document.getElementById("contenido").innerHTML = '<div class="empty">Error de conexión. Reintentando…</div>';
-    actualizarFooter("error de conexión");
+    // Si ya había un render bueno en pantalla, NO lo borramos por un fallo
+    // transitorio de red — solo avisamos en el pie y reintentamos en 20s.
+    if(!huboRenderExitoso){
+      document.getElementById("contenido").innerHTML = '<div class="empty">Error de conexión. Reintentando…</div>';
+    }
+    actualizarFooter("error de conexión (manteniendo última data)");
   }
 }
 
