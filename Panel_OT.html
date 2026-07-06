@@ -243,19 +243,25 @@ async function cargarCerts(){
     const res = await fetch(CERTS_CSV_URL + "&_=" + Date.now());
     const texto = await res.text();
     const lineas = texto.split("\n").filter(l=>l.trim());
-    const hIdx = encontrarHeader(lineas, "nombres");
+    // busca la fila de encabezados: "persona" (hoja del indexador) o "nombres" (hoja RRHH)
+    let hIdx = 0;
+    for(let i=0;i<Math.min(5,lineas.length);i++){
+      const cols = parseLinea(lineas[i]).map(c=>c.trim().toLowerCase());
+      if(cols.some(c=>c.includes("persona")||c.includes("nombres"))){ hIdx=i; break; }
+    }
     const headers = parseLinea(lineas[hIdx]).map(h=>h.trim().toLowerCase());
-    function col(nombres){ // primer header que coincida exacto con alguno de los nombres dados
+    function col(nombres){ // primer header que coincida EXACTO con alguno de los nombres dados
       for(const n of nombres){ const i = headers.indexOf(n); if(i>=0) return i; }
       return -1;
     }
     const idx = {
-      persona: col(["nombres","persona"]),
+      persona: col(["persona","nombres"]),
       cargo: col(["cargo"]),
-      cert: col(["nombre_documento","documento_descripcion","tipo_documento"]),
+      cert: col(["documento","nombre_documento","documento_descripcion","tipo_documento"]),
       emision: col(["fecha_emision"]),
       vencimiento: col(["fecha_vencimiento"]),
       activo: col(["documento_activo"]),
+      link: col(["link documento","link","url"]),
     };
     const filas=[];
     for(let i=hIdx+1;i<lineas.length;i++){
@@ -264,8 +270,10 @@ async function cargarCerts(){
       if(idx.activo>=0 && String(c[idx.activo]).toLowerCase()==="false") continue; // omite documentos inactivos
       filas.push({
         persona:c[idx.persona]||"", cargo:idx.cargo>=0?(c[idx.cargo]||""):"",
-        cert:c[idx.cert]||"Documento", emision:idx.emision>=0?(c[idx.emision]||""):"",
-        vencimiento:idx.vencimiento>=0?(c[idx.vencimiento]||""):""
+        cert:idx.cert>=0?(c[idx.cert]||"Documento"):"Documento",
+        emision:idx.emision>=0?(c[idx.emision]||""):"",
+        vencimiento:idx.vencimiento>=0?(c[idx.vencimiento]||""):"",
+        link:idx.link>=0?(c[idx.link]||""):""
       });
     }
     return filas;
@@ -337,6 +345,7 @@ function abrirModalPersona(persona){
           <span class="cert-pill" style="color:${e.col};background:${e.bg}">${e.txt}</span>
         </div>
         ${fechaTxt ? `<div class="cert-fecha">${fechaTxt}</div>` : ""}
+        ${c.link ? `<a class="cert-link" href="${c.link}" target="_blank" rel="noopener">Ver / descargar documento →</a>` : ""}
       </div>`;
     }).join("");
   }
@@ -379,7 +388,7 @@ function render(actividades, personas){
   document.getElementById("subOT").textContent = eq + " · Anglo American Los Bronces";
 
   const hrsTot = actividades.reduce((s,a)=>s+a.hrs,0);
-  const avanceGlobal = hrsTot>0 ? Math.round(actividades.reduce((s,a)=>s+a.avance*a.hrs,0)/hrsTot) : 0;
+  const avanceGlobal = actividades.length>0 ? Math.round(actividades.reduce((s,a)=>s+a.avance,0)/actividades.length) : 0;
   const nv = nivel(avanceGlobal);
   const col = colorNivel(nv);
   const completas = actividades.filter(a=>a.avance>=100).length;
