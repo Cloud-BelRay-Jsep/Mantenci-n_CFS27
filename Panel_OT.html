@@ -74,7 +74,22 @@
   .p-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0}
   .p-dot.on{background:var(--verde); animation:pulse 2s infinite}
   .p-dot.off{background:var(--dim)}
-  .p-nombre{font-size:13.5px; font-weight:600; flex:1}
+  .p-nombre{font-size:13.5px; font-weight:600; flex:1; cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px}
+  .p-nombre:hover{color:var(--acento)}
+
+  .modal-overlay{position:fixed; inset:0; background:rgba(5,8,15,0.75); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px}
+  .modal-box{background:var(--panel); border:1px solid var(--line); border-radius:14px; max-width:520px; width:100%; max-height:80vh; overflow-y:auto; padding:22px}
+  .modal-top{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px}
+  .modal-nombre{font-size:19px; font-weight:700}
+  .modal-cargo{font-size:13px; color:var(--muted); margin-top:2px}
+  .modal-close{background:var(--panel2); border:none; color:var(--text); width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:16px; flex-shrink:0}
+  .cert-row{background:var(--panel2); border-radius:10px; padding:12px 14px; margin-bottom:8px}
+  .cert-top{display:flex; justify-content:space-between; align-items:center; gap:8px}
+  .cert-nombre{font-size:13.5px; font-weight:600}
+  .cert-pill{font-size:10px; font-weight:700; padding:3px 9px; border-radius:12px; white-space:nowrap}
+  .cert-fecha{font-size:11.5px; color:var(--dim); margin-top:4px}
+  .cert-link{font-size:11.5px; color:var(--acento); margin-top:6px; display:inline-block; text-decoration:none}
+  .cert-link:hover{text-decoration:underline}
   .p-horas{display:flex; gap:12px; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; padding-left:16px}
   .p-horas .h-in{color:var(--verde)}
   .p-horas .h-out{color:var(--rojo)}
@@ -105,7 +120,7 @@
 <body>
   <div class="top">
     <div class="brand">
-      <img class="brand-logo" src="logo-belray.png" alt="Bel-Ray">
+      <img class="brand-logo" src="logo-belray.jpg" alt="Bel-Ray">
       <div class="brand-text">
         <span class="tag">Panel de Actividad · Bel-Ray</span>
         <h1 id="tituloOT">Cargando…</h1>
@@ -127,6 +142,8 @@
 <script>
 const CAPTURA_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA3xg-NepBQFQy3QwQoRINx_AIP_-_ie2Clpq0lLLe56Fm1FokEW4A5VwTwiY13nYtXsBJQKde8wM/pub?gid=1096962834&single=true&output=csv";
 const NFC_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA3xg-NepBQFQy3QwQoRINx_AIP_-_ie2Clpq0lLLe56Fm1FokEW4A5VwTwiY13nYtXsBJQKde8wM/pub?gid=545760247&single=true&output=csv";
+// Publica la pestaña CERTIFICACIONES igual que las otras (Archivo > Compartir > Publicar en la web > CSV) y pega su link aquí:
+const CERTS_CSV_URL   = "";
 const REFRESH_MS = 20000;
 
 const params = new URLSearchParams(window.location.search);
@@ -215,6 +232,130 @@ async function cargarNFC(){
   }
   return res2;
 }
+
+function norm(s){ return String(s||"").trim().toLowerCase(); }
+
+let certsData = [];
+
+async function cargarCerts(){
+  if(!CERTS_CSV_URL) return [];
+  try{
+    const res = await fetch(CERTS_CSV_URL + "&_=" + Date.now());
+    const texto = await res.text();
+    const lineas = texto.split("\n").filter(l=>l.trim());
+    const hIdx = encontrarHeader(lineas, "nombres");
+    const headers = parseLinea(lineas[hIdx]).map(h=>h.trim().toLowerCase());
+    function col(nombres){ // primer header que coincida exacto con alguno de los nombres dados
+      for(const n of nombres){ const i = headers.indexOf(n); if(i>=0) return i; }
+      return -1;
+    }
+    const idx = {
+      persona: col(["nombres","persona"]),
+      cargo: col(["cargo"]),
+      cert: col(["nombre_documento","documento_descripcion","tipo_documento"]),
+      emision: col(["fecha_emision"]),
+      vencimiento: col(["fecha_vencimiento"]),
+      activo: col(["documento_activo"]),
+    };
+    const filas=[];
+    for(let i=hIdx+1;i<lineas.length;i++){
+      const c = parseLinea(lineas[i]);
+      if(!c[idx.persona] || !c[idx.persona].trim()) continue;
+      if(idx.activo>=0 && String(c[idx.activo]).toLowerCase()==="false") continue; // omite documentos inactivos
+      filas.push({
+        persona:c[idx.persona]||"", cargo:idx.cargo>=0?(c[idx.cargo]||""):"",
+        cert:c[idx.cert]||"Documento", emision:idx.emision>=0?(c[idx.emision]||""):"",
+        vencimiento:idx.vencimiento>=0?(c[idx.vencimiento]||""):""
+      });
+    }
+    return filas;
+  }catch(e){ return []; }
+}
+
+// Normaliza quitando tildes, espacios extra y mayúsculas (para comparar nombres)
+function normName(s){
+  return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .trim().toLowerCase().replace(/\s+/g," ");
+}
+// Coincidencia flexible: todas las palabras del nombre más corto deben estar en el más largo
+function personaCoincide(a, b){
+  const na = normName(a), nb = normName(b);
+  if(!na || !nb) return false;
+  if(na===nb) return true;
+  const ta = na.split(" "), tb = nb.split(" ");
+  const corto = ta.length<=tb.length ? ta : tb;
+  const largo = ta.length<=tb.length ? tb : ta;
+  return corto.every(t=>largo.includes(t));
+}
+
+function formatFecha(d){
+  if(!(d instanceof Date) || isNaN(d)) return "";
+  const dd=String(d.getDate()).padStart(2,"0"), mm=String(d.getMonth()+1).padStart(2,"0");
+  return `${dd}-${mm}-${d.getFullYear()}`;
+}
+function parseFechaFlexible(s){
+  if(!s) return null;
+  let d = new Date(s); // maneja ISO 8601 nativo ("2025-03-06T03:00:00.000Z")
+  if(!isNaN(d)) return d;
+  const p = String(s).split("-"); // fallback dd-mm-yyyy
+  if(p.length===3){ d = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0])); if(!isNaN(d)) return d; }
+  return null;
+}
+
+function estadoCert(vencStr){
+  const venc = parseFechaFlexible(vencStr);
+  if(!venc) return {txt:"SIN VENCIMIENTO", col:"var(--dim)", bg:"var(--panel)"};
+  const hoy = new Date();
+  const dias = Math.round((venc-hoy)/86400000);
+  if(dias<0) return {txt:"VENCIDO", col:"var(--rojo)", bg:"var(--rojoBg)"};
+  if(dias<=30) return {txt:"POR VENCER", col:"var(--ambar)", bg:"var(--ambarBg)"};
+  return {txt:"VIGENTE", col:"var(--verde)", bg:"var(--verdeBg)"};
+}
+
+function abrirModalPersona(persona){
+  const certs = certsData.filter(c=>personaCoincide(persona, c.persona));
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+
+  const cargo = certs.length ? certs[0].cargo : "";
+  let cuerpo;
+  if(!CERTS_CSV_URL){
+    cuerpo = '<div class="empty">Aún no está configurada la hoja de certificaciones.</div>';
+  } else if(!certs.length){
+    cuerpo = '<div class="empty">Sin certificaciones registradas para esta persona.</div>';
+  } else {
+    cuerpo = certs.map(c=>{
+      const e = estadoCert(c.vencimiento);
+      const fEmi = formatFecha(parseFechaFlexible(c.emision));
+      const fVen = formatFecha(parseFechaFlexible(c.vencimiento));
+      const fechaTxt = [fVen?('Vence: '+fVen):'', fEmi?('Emitido: '+fEmi):''].filter(Boolean).join(' · ');
+      return `
+      <div class="cert-row">
+        <div class="cert-top">
+          <span class="cert-nombre">${c.cert}</span>
+          <span class="cert-pill" style="color:${e.col};background:${e.bg}">${e.txt}</span>
+        </div>
+        ${fechaTxt ? `<div class="cert-fecha">${fechaTxt}</div>` : ""}
+      </div>`;
+    }).join("");
+  }
+
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-top">
+        <div>
+          <div class="modal-nombre">${persona}</div>
+          ${cargo ? `<div class="modal-cargo">${cargo}</div>` : ""}
+        </div>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      ${cuerpo}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+window.abrirModalPersona = abrirModalPersona;
 
 function nivel(av){ if(av>=100) return "ok"; if(av<50) return "crit"; return "warn"; }
 function colorNivel(nv){ return nv==="ok"?"var(--verde)":(nv==="crit"?"var(--rojo)":"var(--ambar)"); }
@@ -329,7 +470,7 @@ function render(actividades, personas){
           <div class="persona-row ${p.estado==='en terreno'?'activo':''}">
             <div class="p-head">
               <span class="p-dot ${p.estado==='en terreno'?'on':'off'}"></span>
-              <span class="p-nombre">${p.persona}</span>
+              <span class="p-nombre" onclick='abrirModalPersona(${JSON.stringify(p.persona)})'>${p.persona}</span>
               ${p.dur ? `<span class="p-dur">${p.dur}</span>` : ""}
             </div>
             <span class="p-horas">
@@ -348,7 +489,8 @@ let huboRenderExitoso = false;
 
 async function cargarTodo(){
   try{
-    const [captura, nfc] = await Promise.all([cargarCaptura(), cargarNFC()]);
+    const [captura, nfc, certs] = await Promise.all([cargarCaptura(), cargarNFC(), cargarCerts()]);
+    certsData = certs;
 
     if(!OT_SELECCIONADA){
       const vistas={}, otsUnicas=[];
@@ -394,4 +536,4 @@ tick(); setInterval(tick,1000);
 cargarTodo(); setInterval(cargarTodo, REFRESH_MS);
 </script>
 </body>
-</html> 
+</html>
