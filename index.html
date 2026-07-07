@@ -125,6 +125,19 @@ const DATOS_EJEMPLO = [
   {equipo:"Planta de Cal", ot:"4015377192", actividad:"Cambio de sellos y aceite", avance:0, hrs:6, criticidad:"Alta", enTerreno:[], bloqueado:"Sin MAF ni repuestos"},
 ];
 
+function parseNum(raw){
+  let s = String(raw||"").trim().replace(",",".");
+  let v = parseFloat(s);
+  return isNaN(v) ? 0 : v;
+}
+
+function parseAvance(raw){
+  let s = String(raw||"").trim().replace("%","").replace(",",".");
+  let v = parseFloat(s);
+  if(isNaN(v)) return 0;
+  return Math.round(v);
+}
+
 function nivel(av, bloqueado){
   if(bloqueado) return "warn";
   if(av >= 100) return "ok";
@@ -292,8 +305,8 @@ function parseCSV(texto){
       equipo: c[idx.equipo]||"",
       ot: c[idx.ot]||"",
       actividad: c[idx.actividad]||"",
-      avance: parseInt(String(c[idx.avance]).replace(/[^0-9]/g,""))||0,
-      hrs: parseFloat(c[idx.hrs])||0,
+      avance: parseAvance(c[idx.avance]),
+      hrs: parseNum(c[idx.hrs]),
       criticidad: c[idx.criticidad]||"",
       bloqueado: idx.bloqueado>=0 ? (c[idx.bloqueado]||"") : "",
       enTerreno: [] // se llena desde la hoja REGISTRO_NFC (ver Apps Script)
@@ -329,4 +342,4 @@ tick(); setInterval(tick, 1000);
 cargarSheet(); setInterval(cargarSheet, REFRESH_MS);
 </script>
 </body>
-</html> 
+</html>
