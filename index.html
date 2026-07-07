@@ -33,7 +33,7 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
   .clock{font-variant-numeric:tabular-nums; font-size:14px; color:var(--text)}
 
-  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px}
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr); gap:12px; margin-bottom:20px}
   .kpi{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px}
   .kpi .label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px}
   .kpi .value{font-size:30px; font-weight:700; margin-top:4px; font-variant-numeric:tabular-nums}
@@ -151,53 +151,93 @@ function pillText(av, bloqueado){
   return "EN PROCESO";
 }
 
-function render(datos){
-  // KPIs
-  const total = datos.length;
-  const completas = datos.filter(d=>d.avance>=100).length;
-  const enProceso = datos.filter(d=>d.avance>0 && d.avance<100).length;
-  const personas = datos.reduce((s,d)=>s + (d.enTerreno?d.enTerreno.length:0), 0);
-  const avgGlobal = total ? Math.round(datos.reduce((s,d)=>s + d.avance*d.hrs,0) / datos.reduce((s,d)=>s+d.hrs,0)) : 0;
+function agruparPorOT(datos){
+  const mapa = {};
+  datos.forEach(d=>{
+    if(!mapa[d.ot]){
+      mapa[d.ot] = {
+        ot:d.ot, equipo:d.equipo, hrsTotal:0, hrsGanadas:0,
+        actividades:0, completadas:0, enProceso:0, sinIniciar:0,
+        bloqueado:"", enTerreno:[]
+      };
+    }
+    const g = mapa[d.ot];
+    g.hrsTotal += d.hrs;
+    g.hrsGanadas += d.hrs * d.avance / 100;
+    g.actividades++;
+    if(d.avance>=100) g.completadas++;
+    else if(d.avance>0) g.enProceso++;
+    else g.sinIniciar++;
+    if(d.bloqueado && !g.bloqueado) g.bloqueado = d.bloqueado;
+    if(d.enTerreno && d.enTerreno.length) g.enTerreno = g.enTerreno.concat(d.enTerreno);
+  });
+  return Object.values(mapa).map(g=>({
+    ot:g.ot, equipo:g.equipo,
+    avance: g.hrsTotal>0 ? Math.round(g.hrsGanadas/g.hrsTotal*100) : 0,
+    hrs: Math.round(g.hrsTotal*10)/10,
+    actividades:g.actividades, completadas:g.completadas,
+    enProceso:g.enProceso, sinIniciar:g.sinIniciar,
+    bloqueado:g.bloqueado, enTerreno:[...new Set(g.enTerreno)]
+  }));
+}
+
+function render(datosActividades){
+  const ots = agruparPorOT(datosActividades);
+
+  // ===== KPIs tipo "Resumen ejecutivo" =====
+  const totalOT = ots.length;
+  const otCompletas = ots.filter(o=>o.avance>=100 && !o.bloqueado).length;
+  const otEnProceso = ots.filter(o=>o.avance>0 && o.avance<100 && !o.bloqueado).length;
+  const otSinIniciar = ots.filter(o=>o.avance===0 && !o.bloqueado).length;
+  const otBloqueadas = ots.filter(o=>o.bloqueado).length;
+  const hrsEstTotales = ots.reduce((s,o)=>s+o.hrs,0);
+  const personas = [...new Set(ots.flatMap(o=>o.enTerreno))].length;
+  const hrsGanadasTot = datosActividades.reduce((s,d)=>s+d.hrs*d.avance/100,0);
+  const avgGlobal = hrsEstTotales>0 ? Math.round(hrsGanadasTot/hrsEstTotales*100) : 0;
 
   document.getElementById("kpis").innerHTML = `
     <div class="kpi"><div class="label">Avance crítico</div><div class="value">${avgGlobal}<small>%</small></div></div>
-    <div class="kpi"><div class="label">Frentes críticos</div><div class="value">${total}</div></div>
-    <div class="kpi"><div class="label">Completados</div><div class="value">${completas}<small>/${total}</small></div></div>
+    <div class="kpi"><div class="label">OT críticas</div><div class="value">${totalOT}</div></div>
+    <div class="kpi"><div class="label">Completadas</div><div class="value">${otCompletas}<small>/${totalOT}</small></div></div>
+    <div class="kpi"><div class="label">En proceso</div><div class="value">${otEnProceso}</div></div>
+    <div class="kpi"><div class="label">Sin iniciar</div><div class="value">${otSinIniciar}</div></div>
+    <div class="kpi"><div class="label">Bloqueadas</div><div class="value">${otBloqueadas}</div></div>
+    <div class="kpi"><div class="label">Hrs estimadas</div><div class="value">${hrsEstTotales.toFixed(1)}</div></div>
     <div class="kpi"><div class="label">Personas en terreno</div><div class="value">${personas}</div></div>
   `;
 
-  // Ordena: primero lo crítico incompleto, luego el resto
-  datos.sort((a,b)=>{
-    const na = a.avance>=100?2:(a.avance<50?0:1);
-    const nb = b.avance>=100?2:(b.avance<50?0:1);
-    return na - nb;
+  // Ordena: bloqueadas primero, luego por avance ascendente (lo menos avanzado arriba)
+  ots.sort((a,b)=>{
+    const pa = a.bloqueado?0:1, pb = b.bloqueado?0:1;
+    if(pa!==pb) return pa-pb;
+    return a.avance - b.avance;
   });
 
   const grid = document.getElementById("grid");
-  if(!datos.length){ grid.innerHTML = '<div class="empty">No hay tareas críticas cargadas.</div>'; return; }
+  if(!ots.length){ grid.innerHTML = '<div class="empty">No hay OT críticas cargadas.</div>'; return; }
 
-  grid.innerHTML = datos.map(d=>{
-    const nv = nivel(d.avance, d.bloqueado);
-    const gente = (d.enTerreno && d.enTerreno.length)
-      ? d.enTerreno.map(p=>`<span class="persona">${p}</span>`).join(" ")
+  grid.innerHTML = ots.map(o=>{
+    const nv = nivel(o.avance, o.bloqueado);
+    const gente = (o.enTerreno && o.enTerreno.length)
+      ? o.enTerreno.map(p=>`<span class="persona">${p}</span>`).join(" ")
       : '<span class="nadie">Sin personal en terreno ahora</span>';
-    const detalle = d.bloqueado ? `⚠ ${d.bloqueado}` : d.actividad;
+    const detalle = o.bloqueado ? `⚠ ${o.bloqueado}` : `${o.actividades} actividades · ${o.completadas} completadas`;
     return `
       <div class="card ${nv}">
         <div class="card-head">
           <div>
-            <div class="equipo">${d.equipo}</div>
-            <div class="ot">OT ${d.ot}</div>
+            <div class="equipo">${o.equipo}</div>
+            <div class="ot">OT ${o.ot}</div>
           </div>
-          <span class="pill ${nv}">${pillText(d.avance, d.bloqueado)}</span>
+          <span class="pill ${nv}">${pillText(o.avance, o.bloqueado)}</span>
         </div>
         <div class="actividad">${detalle}</div>
         <div class="prog-wrap">
           <div class="prog-top">
-            <span class="prog-pct">${d.avance}%</span>
-            <span class="prog-hrs">${d.hrs} hrs estimadas</span>
+            <span class="prog-pct">${o.avance}%</span>
+            <span class="prog-hrs">${o.hrs} hrs estimadas</span>
           </div>
-          <div class="bar"><div class="bar-fill fill-${nv}" style="width:${d.avance}%"></div></div>
+          <div class="bar"><div class="bar-fill fill-${nv}" style="width:${o.avance}%"></div></div>
         </div>
         <div class="terreno">
           <span class="icon">●</span>
