@@ -586,7 +586,7 @@ function renderVistaGantt(cont){
   let html = toggleHtml() + '<div class="selector">';
 
   if(conFecha.length){
-    const PX_HORA = 7, ALTO_FILA = 30;
+    const PX_HORA = 10, ALTO_FILA = 40, ANCHO_MIN = 155;
     const minFecha = new Date(Math.min(...conFecha.map(o=>o.fechaInicio)));
     const maxFecha = new Date(Math.max(...conFecha.map(o=>o.fechaTermino)));
     const inicioGrilla = new Date(minFecha.getFullYear(), minFecha.getMonth(), minFecha.getDate());
@@ -607,18 +607,19 @@ function renderVistaGantt(cont){
     ordenadas.forEach((o,i)=>{
       const {clase, etiqueta} = estadoOT(o);
       const left = Math.round((o.fechaInicio - inicioGrilla) / 3600000 * PX_HORA);
-      const width = Math.max(34, Math.round((o.fechaTermino - o.fechaInicio) / 3600000 * PX_HORA));
+      const width = Math.max(ANCHO_MIN, Math.round((o.fechaTermino - o.fechaInicio) / 3600000 * PX_HORA));
       const hIni = `${String(o.fechaInicio.getHours()).padStart(2,"0")}:${String(o.fechaInicio.getMinutes()).padStart(2,"0")}`;
       const hFin = `${String(o.fechaTermino.getHours()).padStart(2,"0")}:${String(o.fechaTermino.getMinutes()).padStart(2,"0")}`;
       barsHtml += `
-        <a class="gantt-bar compacta ${clase}" href="?ot=${encodeURIComponent(o.ot)}"
+        <a class="gantt-bar ${clase}" href="?ot=${encodeURIComponent(o.ot)}"
            title="OT ${o.ot} — ${o.equipo} · ${o.actividad}${o.componente?' · '+o.componente:''} · ${hIni}–${hFin} · ${etiqueta} · ${o.avance}%"
-           style="left:${left}px; width:${width}px; top:${i*(ALTO_FILA+4)}px">
-          <span class="gb-corto">${o.ot} · ${o.avance}%</span>
+           style="left:${left}px; width:${width}px; top:${i*(ALTO_FILA+6)}px">
+          <span class="gb-nombre">OT ${o.ot} — ${o.equipo}</span>
+          <span class="gb-hora">${hIni}–${hFin} · ${o.avance}%</span>
         </a>`;
     });
 
-    const altoTotal = ordenadas.length * (ALTO_FILA+4);
+    const altoTotal = ordenadas.length * (ALTO_FILA+6);
 
     html += `
       <div class="gantt-scroll">
