@@ -111,6 +111,29 @@
   .footer{margin-top:24px; text-align:center; font-size:11px; color:var(--dim)}
 
   .selector{max-width:100%; margin:20px auto}
+
+  .vista-toggle{display:flex; gap:8px; margin-bottom:16px}
+  .vt-btn{
+    background:var(--panel); border:1px solid var(--line); color:var(--muted);
+    padding:8px 18px; border-radius:20px; font-size:13px; cursor:pointer; font-family:inherit;
+  }
+  .vt-btn.activo{background:var(--azulBg); border-color:var(--acento); color:var(--acento); font-weight:600}
+  .vt-btn:hover{color:var(--text)}
+
+  .timeline-item{display:flex; align-items:stretch; gap:14px; margin-bottom:10px}
+  .time-badge{
+    flex-shrink:0; width:64px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; color:var(--text); background:var(--panel2);
+    border-radius:10px; font-variant-numeric:tabular-nums; padding:4px 0;
+  }
+  .time-badge .hasta{font-size:8px; color:var(--dim); font-weight:400; text-transform:uppercase; margin:1px 0}
+  .timeline-card{flex:1; min-width:0}
+  .timeline-card .ot-pick{margin-bottom:0}
+
+  .gantt-hint{font-size:11px; color:var(--dim); text-align:center; margin-top:8px}
+  .gantt-bar.compacta{height:26px; padding:0 6px; border-radius:5px; justify-content:center}
+  .gb-corto{font-size:10px; font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis}
+
   .gantt-scroll{overflow-x:auto; overflow-y:hidden; border:1px solid var(--line); border-radius:12px; background:var(--panel)}
   .gantt-inner{position:relative}
   .gantt-header{display:flex; position:sticky; top:0; z-index:2; background:var(--panel); border-bottom:1px solid var(--line)}
@@ -481,19 +504,89 @@ function tarjetaOT(o){
     </a>`;
 }
 
+let otsGlobal = [];
+let vistaActual = "lista";
+
+function cambiarVista(v){
+  vistaActual = v;
+  renderVista();
+}
+window.cambiarVista = cambiarVista;
+
+function toggleHtml(){
+  return `
+    <div class="vista-toggle">
+      <button class="vt-btn ${vistaActual==='lista'?'activo':''}" onclick="cambiarVista('lista')">☰ Lista</button>
+      <button class="vt-btn ${vistaActual==='gantt'?'activo':''}" onclick="cambiarVista('gantt')">▭ Gantt</button>
+    </div>`;
+}
+
 function renderSelector(otsUnicas){
+  otsGlobal = otsUnicas;
   document.getElementById("tituloOT").textContent = "Selecciona una OT";
   document.getElementById("subOT").textContent = "Línea de tiempo · Elige qué actividad mostrar en este panel";
   const cont = document.getElementById("contenido");
   if(!otsUnicas.length){ cont.innerHTML = '<div class="empty">No hay OTs cargadas en CAPTURA.</div>'; return; }
+  renderVista();
+}
 
-  const conFecha = otsUnicas.filter(o=>o.fechaInicio && o.fechaTermino);
-  const sinFecha = otsUnicas.filter(o=>!o.fechaInicio || !o.fechaTermino);
+function renderVista(){
+  const cont = document.getElementById("contenido");
+  if(vistaActual==="lista") renderVistaLista(cont);
+  else renderVistaGantt(cont);
+}
 
-  let html = '<div class="selector">';
+// ===== VISTA LISTA: agrupada por día, hora inicio–fin, tarjeta completa sin recortes =====
+function renderVistaLista(cont){
+  const conFecha = otsGlobal.filter(o=>o.fechaInicio && o.fechaTermino).sort((a,b)=>a.fechaInicio-b.fechaInicio);
+  const sinFecha = otsGlobal.filter(o=>!o.fechaInicio || !o.fechaTermino);
+
+  let html = toggleHtml() + '<div class="selector">';
 
   if(conFecha.length){
-    const PX_HORA = 16, ALTO_FILA = 44;
+    const porDia = {}, ordenDias = [];
+    conFecha.forEach(o=>{
+      const key = o.fechaInicio.toDateString();
+      if(!porDia[key]){ porDia[key]=[]; ordenDias.push(key); }
+      porDia[key].push(o);
+    });
+    html += ordenDias.map(key=>{
+      const items = porDia[key];
+      const d = items[0].fechaInicio;
+      const diaTxt = `${DIAS_SEMANA[d.getDay()]} ${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      return `
+        <div class="dia-header">${diaTxt}</div>
+        ${items.map(o=>{
+          const hIni = `${String(o.fechaInicio.getHours()).padStart(2,"0")}:${String(o.fechaInicio.getMinutes()).padStart(2,"0")}`;
+          const hFin = `${String(o.fechaTermino.getHours()).padStart(2,"0")}:${String(o.fechaTermino.getMinutes()).padStart(2,"0")}`;
+          return `
+          <div class="timeline-item">
+            <div class="time-badge">${hIni}<span class="hasta">hasta</span>${hFin}</div>
+            <div class="timeline-card">${tarjetaOT(o)}</div>
+          </div>`;
+        }).join("")}
+      `;
+    }).join("");
+  }
+
+  if(sinFecha.length){
+    html += `<div class="dia-header sinfecha-header">SIN FECHA EN EL GANTT (${sinFecha.length})</div>`;
+    html += sinFecha.map(o=>`<div style="margin-bottom:8px">${tarjetaOT(o)}</div>`).join("");
+  }
+
+  html += '</div>';
+  cont.innerHTML = html;
+}
+
+// ===== VISTA GANTT: compacta, barras cortas con OT+%, detalle completo en tooltip =====
+function renderVistaGantt(cont){
+  const conFecha = otsGlobal.filter(o=>o.fechaInicio && o.fechaTermino);
+  const sinFecha = otsGlobal.filter(o=>!o.fechaInicio || !o.fechaTermino);
+
+  let html = toggleHtml() + '<div class="selector">';
+
+  if(conFecha.length){
+    const PX_HORA = 7, ALTO_FILA = 30;
     const minFecha = new Date(Math.min(...conFecha.map(o=>o.fechaInicio)));
     const maxFecha = new Date(Math.max(...conFecha.map(o=>o.fechaTermino)));
     const inicioGrilla = new Date(minFecha.getFullYear(), minFecha.getMonth(), minFecha.getDate());
@@ -501,9 +594,7 @@ function renderSelector(otsUnicas){
     const totalDias = Math.round((finGrilla - inicioGrilla) / 86400000);
     const anchoTotal = totalDias * 24 * PX_HORA;
 
-    // columnas de días
-    let headerHtml = '';
-    let gridHtml = '';
+    let headerHtml = '', gridHtml = '';
     for(let d=0; d<totalDias; d++){
       const fecha = new Date(inicioGrilla.getTime() + d*86400000);
       const ancho = 24 * PX_HORA;
@@ -511,24 +602,23 @@ function renderSelector(otsUnicas){
       gridHtml += `<div class="gantt-gridline" style="left:${d*ancho}px"></div>`;
     }
 
-    // ordena por fila: apila por orden de inicio (una fila por OT, no se solapan visualmente si caben)
     const ordenadas = conFecha.slice().sort((a,b)=>a.fechaInicio-b.fechaInicio);
     let barsHtml = '';
     ordenadas.forEach((o,i)=>{
       const {clase, etiqueta} = estadoOT(o);
       const left = Math.round((o.fechaInicio - inicioGrilla) / 3600000 * PX_HORA);
-      const width = Math.max(60, Math.round((o.fechaTermino - o.fechaInicio) / 3600000 * PX_HORA));
+      const width = Math.max(34, Math.round((o.fechaTermino - o.fechaInicio) / 3600000 * PX_HORA));
       const hIni = `${String(o.fechaInicio.getHours()).padStart(2,"0")}:${String(o.fechaInicio.getMinutes()).padStart(2,"0")}`;
       const hFin = `${String(o.fechaTermino.getHours()).padStart(2,"0")}:${String(o.fechaTermino.getMinutes()).padStart(2,"0")}`;
       barsHtml += `
-        <a class="gantt-bar ${clase}" href="?ot=${encodeURIComponent(o.ot)}" title="OT ${o.ot} — ${o.equipo} · ${o.actividad} · ${etiqueta} · ${o.avance}%"
-           style="left:${left}px; width:${width}px; top:${i*(ALTO_FILA+6)}px">
-          <span class="gb-nombre">OT ${o.ot} — ${o.equipo}</span>
-          <span class="gb-hora">${hIni}–${hFin} · ${o.avance}%</span>
+        <a class="gantt-bar compacta ${clase}" href="?ot=${encodeURIComponent(o.ot)}"
+           title="OT ${o.ot} — ${o.equipo} · ${o.actividad}${o.componente?' · '+o.componente:''} · ${hIni}–${hFin} · ${etiqueta} · ${o.avance}%"
+           style="left:${left}px; width:${width}px; top:${i*(ALTO_FILA+4)}px">
+          <span class="gb-corto">${o.ot} · ${o.avance}%</span>
         </a>`;
     });
 
-    const altoTotal = ordenadas.length * (ALTO_FILA+6);
+    const altoTotal = ordenadas.length * (ALTO_FILA+4);
 
     html += `
       <div class="gantt-scroll">
@@ -539,7 +629,8 @@ function renderSelector(otsUnicas){
             ${barsHtml}
           </div>
         </div>
-      </div>`;
+      </div>
+      <div class="gantt-hint">Pasa el mouse sobre una barra para ver el detalle completo</div>`;
   }
 
   if(sinFecha.length){
