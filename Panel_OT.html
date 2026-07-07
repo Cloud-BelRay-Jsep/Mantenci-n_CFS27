@@ -433,7 +433,7 @@ function render(actividades, personas){
           <div class="hero-stats">
             <div class="hstat"><div class="v">${actividades.length}</div><div class="l">Actividades</div></div>
             <div class="hstat"><div class="v">${completas}/${actividades.length}</div><div class="l">Completadas</div></div>
-            <div class="hstat"><div class="v">${hrsTot}</div><div class="l">Hrs estimadas</div></div>
+            <div class="hstat"><div class="v">${Math.round(hrsTot*10)/10}</div><div class="l">Hrs estimadas</div></div>
             <div class="hstat"><div class="v">${bloqueadas}</div><div class="l">Bloqueadas</div></div>
           </div>
         </div>
