@@ -160,6 +160,19 @@ function parseLinea(linea){
   res.push(cur);
   return res.map(s=>s.trim());
 }
+function parseNum(raw){
+  let s = String(raw||"").trim().replace(",",".");
+  let v = parseFloat(s);
+  return isNaN(v) ? 0 : v;
+}
+
+function parseAvance(raw){
+  let s = String(raw||"").trim().replace("%","").replace(",",".");
+  let v = parseFloat(s);
+  if(isNaN(v)) return 0;
+  return Math.round(v);
+}
+
 function encontrarHeader(lineas, clave){
   for(let i=0;i<Math.min(5,lineas.length);i++){
     const cols = parseLinea(lineas[i]).map(c=>c.trim().toLowerCase());
@@ -195,8 +208,8 @@ async function cargarCaptura(){
     if(!c[idx.equipo] || !c[idx.equipo].trim()) continue;
     filas.push({
       equipo:c[idx.equipo]||"", ot:(c[idx.ot]||"").trim(), actividad:c[idx.actividad]||"",
-      avance:parseInt(String(c[idx.avance]).replace(/[^0-9]/g,""))||0,
-      hrs:parseFloat(c[idx.hrs])||0, estado:c[idx.estado]||"",
+      avance:parseAvance(c[idx.avance]),
+      hrs:parseNum(c[idx.hrs]), estado:c[idx.estado]||"",
       resp:c[idx.resp]||"", criticidad:c[idx.criticidad]||"",
       bloqueado: idx.bloqueado>=0 ? (c[idx.bloqueado]||"") : ""
     });
