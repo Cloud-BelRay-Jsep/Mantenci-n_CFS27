@@ -33,43 +33,42 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
   .clock{font-variant-numeric:tabular-nums; font-size:14px; color:var(--text)}
 
-  .kpis{display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr); gap:12px; margin-bottom:20px}
-  .kpi{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px}
-  .kpi .label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px}
-  .kpi .value{font-size:30px; font-weight:700; margin-top:4px; font-variant-numeric:tabular-nums}
-  .kpi .value small{font-size:15px; color:var(--muted); font-weight:400}
+  .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px}
+  .kpi{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 12px}
+  .kpi .label{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px}
+  .kpi .value{font-size:24px; font-weight:700; margin-top:2px; font-variant-numeric:tabular-nums}
+  .kpi .value small{font-size:13px; color:var(--muted); font-weight:400}
 
   .section-title{font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:6px 0 12px}
 
-  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:14px}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px}
   .card{
-    background:var(--panel); border:1px solid var(--line); border-radius:12px;
-    padding:16px 18px; position:relative; overflow:hidden;
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:9px 11px; position:relative; overflow:hidden;
   }
-  .card.crit{border-left:4px solid var(--rojo)}
-  .card.warn{border-left:4px solid var(--ambar)}
-  .card.ok{border-left:4px solid var(--verde)}
-  .card-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px}
-  .equipo{font-size:17px; font-weight:600}
-  .ot{font-size:11px; color:var(--dim); font-family:ui-monospace,monospace; margin-top:2px}
-  .pill{font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; white-space:nowrap}
+  .card.crit{border-left:3px solid var(--rojo)}
+  .card.warn{border-left:3px solid var(--ambar)}
+  .card.ok{border-left:3px solid var(--verde)}
+  .card-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2px; gap:6px}
+  .equipo{font-size:12.5px; font-weight:600; line-height:1.2}
+  .ot{font-size:9.5px; color:var(--dim); font-family:ui-monospace,monospace; margin-top:1px}
+  .pill{font-size:9px; font-weight:700; padding:2px 7px; border-radius:14px; white-space:nowrap; flex-shrink:0}
   .pill.crit{background:var(--rojoBg); color:var(--rojo)}
   .pill.warn{background:var(--ambarBg); color:var(--ambar)}
   .pill.ok{background:var(--verdeBg); color:var(--verde)}
-  .actividad{font-size:13px; color:var(--muted); margin:8px 0 14px; line-height:1.4}
+  .actividad{font-size:10.5px; color:var(--muted); margin:3px 0 6px; line-height:1.3}
 
-  .prog-wrap{margin-bottom:12px}
-  .prog-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px}
-  .prog-pct{font-size:22px; font-weight:700; font-variant-numeric:tabular-nums}
-  .prog-hrs{font-size:11px; color:var(--dim)}
-  .bar{height:10px; background:var(--panel2); border-radius:6px; overflow:hidden}
-  .bar-fill{height:100%; border-radius:6px; transition:width 0.6s ease}
+  .prog-wrap{margin-bottom:4px}
+  .prog-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px}
+  .prog-pct{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums}
+  .prog-hrs{font-size:9.5px; color:var(--dim)}
+  .bar{height:6px; background:var(--panel2); border-radius:4px; overflow:hidden}
+  .bar-fill{height:100%; border-radius:4px; transition:width 0.6s ease}
   .fill-ok{background:var(--verde)} .fill-warn{background:var(--ambar)} .fill-crit{background:var(--rojo)}
 
-  .terreno{display:flex; align-items:center; gap:8px; padding-top:12px; border-top:1px solid var(--line); font-size:12px}
-  .terreno .icon{color:var(--acento)}
-  .terreno .nadie{color:var(--dim)}
-  .persona{background:var(--azulBg); color:#7FB2F5; padding:2px 9px; border-radius:14px; font-size:11px; font-weight:500}
+  .terreno{display:flex; align-items:center; flex-wrap:wrap; gap:4px; padding-top:5px; margin-top:4px; border-top:1px solid var(--line); font-size:9.5px}
+  .terreno .icon{color:var(--acento); font-size:8px}
+  .persona{background:var(--azulBg); color:#7FB2F5; padding:1px 6px; border-radius:10px; font-size:9.5px; font-weight:500}
   .en-terreno-tag{
     position:absolute; top:14px; right:14px; display:none;
   }
@@ -156,7 +155,7 @@ function agruparPorOT(datos){
   datos.forEach(d=>{
     if(!mapa[d.ot]){
       mapa[d.ot] = {
-        ot:d.ot, equipo:d.equipo, hrsTotal:0, hrsGanadas:0,
+        ot:d.ot, equipo:d.equipo, hrsTotal:0, hrsGanadas:0, horasReal:0,
         actividades:0, completadas:0, enProceso:0, sinIniciar:0,
         bloqueado:"", enTerreno:[]
       };
@@ -164,6 +163,7 @@ function agruparPorOT(datos){
     const g = mapa[d.ot];
     g.hrsTotal += d.hrs;
     g.hrsGanadas += d.hrs * d.avance / 100;
+    g.horasReal += d.horasReal||0;
     g.actividades++;
     if(d.avance>=100) g.completadas++;
     else if(d.avance>0) g.enProceso++;
@@ -175,6 +175,7 @@ function agruparPorOT(datos){
     ot:g.ot, equipo:g.equipo,
     avance: g.hrsTotal>0 ? Math.round(g.hrsGanadas/g.hrsTotal*100) : 0,
     hrs: Math.round(g.hrsTotal*10)/10,
+    horasReal: Math.round(g.horasReal*10)/10,
     actividades:g.actividades, completadas:g.completadas,
     enProceso:g.enProceso, sinIniciar:g.sinIniciar,
     bloqueado:g.bloqueado, enTerreno:[...new Set(g.enTerreno)]
@@ -184,29 +185,31 @@ function agruparPorOT(datos){
 function render(datosActividades){
   const ots = agruparPorOT(datosActividades);
 
-  // ===== KPIs tipo "Resumen ejecutivo" =====
+  // ===== KPIs — panorama completo (todas las OT del Gantt) =====
   const totalOT = ots.length;
   const otCompletas = ots.filter(o=>o.avance>=100 && !o.bloqueado).length;
   const otEnProceso = ots.filter(o=>o.avance>0 && o.avance<100 && !o.bloqueado).length;
   const otSinIniciar = ots.filter(o=>o.avance===0 && !o.bloqueado).length;
   const otBloqueadas = ots.filter(o=>o.bloqueado).length;
   const hrsEstTotales = ots.reduce((s,o)=>s+o.hrs,0);
+  const hrsRealesTotales = ots.reduce((s,o)=>s+o.horasReal,0);
   const personas = [...new Set(ots.flatMap(o=>o.enTerreno))].length;
   const hrsGanadasTot = datosActividades.reduce((s,d)=>s+d.hrs*d.avance/100,0);
   const avgGlobal = hrsEstTotales>0 ? Math.round(hrsGanadasTot/hrsEstTotales*100) : 0;
 
   document.getElementById("kpis").innerHTML = `
-    <div class="kpi"><div class="label">Avance crítico</div><div class="value">${avgGlobal}<small>%</small></div></div>
-    <div class="kpi"><div class="label">OT críticas</div><div class="value">${totalOT}</div></div>
+    <div class="kpi"><div class="label">Avance global</div><div class="value">${avgGlobal}<small>%</small></div></div>
+    <div class="kpi"><div class="label">OT totales</div><div class="value">${totalOT}</div></div>
     <div class="kpi"><div class="label">Completadas</div><div class="value">${otCompletas}<small>/${totalOT}</small></div></div>
     <div class="kpi"><div class="label">En proceso</div><div class="value">${otEnProceso}</div></div>
     <div class="kpi"><div class="label">Sin iniciar</div><div class="value">${otSinIniciar}</div></div>
     <div class="kpi"><div class="label">Bloqueadas</div><div class="value">${otBloqueadas}</div></div>
-    <div class="kpi"><div class="label">Hrs estimadas</div><div class="value">${hrsEstTotales.toFixed(1)}</div></div>
+    <div class="kpi"><div class="label">Hrs estimadas (Gantt)</div><div class="value">${hrsEstTotales.toFixed(1)}</div></div>
+    <div class="kpi"><div class="label">Hrs reales medidas</div><div class="value">${hrsRealesTotales.toFixed(1)}</div></div>
     <div class="kpi"><div class="label">Personas en terreno</div><div class="value">${personas}</div></div>
   `;
 
-  // Ordena: bloqueadas primero, luego por avance ascendente (lo menos avanzado arriba)
+  // Ordena: bloqueadas primero, luego por avance ascendente
   ots.sort((a,b)=>{
     const pa = a.bloqueado?0:1, pb = b.bloqueado?0:1;
     if(pa!==pb) return pa-pb;
@@ -214,14 +217,14 @@ function render(datosActividades){
   });
 
   const grid = document.getElementById("grid");
-  if(!ots.length){ grid.innerHTML = '<div class="empty">No hay OT críticas cargadas.</div>'; return; }
+  if(!ots.length){ grid.innerHTML = '<div class="empty">No hay OT cargadas.</div>'; return; }
 
   grid.innerHTML = ots.map(o=>{
     const nv = nivel(o.avance, o.bloqueado);
     const gente = (o.enTerreno && o.enTerreno.length)
       ? o.enTerreno.map(p=>`<span class="persona">${p}</span>`).join(" ")
-      : '<span class="nadie">Sin personal en terreno ahora</span>';
-    const detalle = o.bloqueado ? `⚠ ${o.bloqueado}` : `${o.actividades} actividades · ${o.completadas} completadas`;
+      : '';
+    const detalle = o.bloqueado ? `⚠ ${o.bloqueado}` : `${o.actividades} act. · ${o.completadas} OK`;
     return `
       <div class="card ${nv}">
         <div class="card-head">
@@ -235,15 +238,11 @@ function render(datosActividades){
         <div class="prog-wrap">
           <div class="prog-top">
             <span class="prog-pct">${o.avance}%</span>
-            <span class="prog-hrs">${o.hrs} hrs estimadas</span>
+            <span class="prog-hrs">${o.hrs}h est · ${o.horasReal}h real</span>
           </div>
           <div class="bar"><div class="bar-fill fill-${nv}" style="width:${o.avance}%"></div></div>
         </div>
-        <div class="terreno">
-          <span class="icon">●</span>
-          <span>En terreno:</span>
-          ${gente}
-        </div>
+        ${gente ? `<div class="terreno"><span class="icon">●</span>${gente}</div>` : ""}
       </div>
     `;
   }).join("");
@@ -334,19 +333,20 @@ function parseCSV(texto){
     hrs: headers.findIndex(h=>h.includes("hrs")||h.includes("total")),
     criticidad: headers.findIndex(h=>h.includes("criticidad")),
     bloqueado: headers.findIndex(h=>h.includes("bloqueado")||h.includes("pausado")),
+    duracionReal: headers.findIndex(h=>h.includes("duraci")),
   };
   const filas = [];
   for(let i=headerIdx+1;i<lineas.length;i++){
     const c = parseLinea(lineas[i]);
     if(!c[idx.equipo] || !c[idx.equipo].trim()) continue;
-    // SOLO críticas
-    if(idx.criticidad>=0 && !String(c[idx.criticidad]).toLowerCase().includes("alta")) continue;
+    // TODAS las actividades del Gantt (ya no se filtra solo por criticidad)
     filas.push({
       equipo: c[idx.equipo]||"",
       ot: c[idx.ot]||"",
       actividad: c[idx.actividad]||"",
       avance: parseAvance(c[idx.avance]),
       hrs: parseNum(c[idx.hrs]),
+      horasReal: idx.duracionReal>=0 ? parseNum(c[idx.duracionReal]) : 0,
       criticidad: c[idx.criticidad]||"",
       bloqueado: idx.bloqueado>=0 ? (c[idx.bloqueado]||"") : "",
       enTerreno: [] // se llena desde la hoja REGISTRO_NFC (ver Apps Script)
