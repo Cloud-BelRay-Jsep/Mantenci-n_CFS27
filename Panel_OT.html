@@ -110,7 +110,22 @@
   .empty{color:var(--dim); text-align:center; padding:30px; font-size:14px}
   .footer{margin-top:24px; text-align:center; font-size:11px; color:var(--dim)}
 
-  .selector{max-width:640px; margin:60px auto}
+  .selector{max-width:760px; margin:20px auto}
+  .dia-header{
+    font-size:13px; font-weight:700; color:var(--acento); text-transform:uppercase; letter-spacing:1px;
+    margin:26px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--line);
+  }
+  .dia-header:first-child{margin-top:0}
+  .dia-header.sin-fecha{color:var(--dim)}
+  .timeline-item{display:flex; align-items:stretch; gap:14px; margin-bottom:10px}
+  .time-badge{
+    flex-shrink:0; width:58px; display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:700; color:var(--text); background:var(--panel2);
+    border-radius:10px; font-variant-numeric:tabular-nums;
+  }
+  .timeline-card{flex:1; min-width:0}
+  .timeline-card .ot-pick{margin-bottom:0}
+  .timeline-card.sin-hora{margin-bottom:10px}
   .ot-pick{display:block; text-decoration:none; color:var(--text); background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:10px}
   .ot-pick.completada{border-left-color:var(--verde); background:linear-gradient(90deg, var(--verdeBg) 0%, var(--panel) 12%)}
   .ot-pick.en-proceso{border-left-color:var(--ambar); background:linear-gradient(90deg, var(--ambarBg) 0%, var(--panel) 12%)}
@@ -191,6 +206,37 @@ function encontrarHeader(lineas, clave){
   return 0;
 }
 
+// Ventanas de tiempo planificadas del Gantt (OT: [inicio, término]).
+// Tomado de Carta_Gantt_MM_Planta_Confluencia_Julio_2026 — inicio más temprano
+// y término más tardío entre todas las tareas de cada OT.
+const GANTT_FECHAS = {
+  "4010814496": ["07-07-2026 21:00","08-07-2026 05:00"],
+  "4011493322": ["06-07-2026 16:00","07-07-2026 12:00"],
+  "4011563519": ["07-07-2026 21:00","08-07-2026 09:00"],
+  "4012378390": ["06-07-2026 10:00","07-07-2026 00:00"],
+  "4014525245": ["07-07-2026 19:00","07-07-2026 23:00"],
+  "4014956075": ["10-07-2026 19:00","12-07-2026 05:00"],
+  "4014956076": ["08-07-2026 15:00","09-07-2026 20:00"],
+  "4015073916": ["06-07-2026 13:00","08-07-2026 05:00"],
+  "4015073917": ["06-07-2026 13:00","06-07-2026 23:00"],
+  "4015073924": ["10-07-2026 08:00","10-07-2026 19:00"],
+  "4015073996": ["08-07-2026 05:00","08-07-2026 18:00"],
+  "4015074012": ["06-07-2026 10:00","06-07-2026 18:30"],
+  "4015074058": ["07-07-2026 08:00","08-07-2026 08:00"],
+  "4015074062": ["08-07-2026 08:00","09-07-2026 08:00"],
+  "4015074100": ["06-07-2026 10:00","08-07-2026 02:00"],
+  "4015074102": ["07-07-2026 19:00","08-07-2026 05:00"],
+  "4015074112": ["11-07-2026 10:00","11-07-2026 21:00"],
+  "4015074125": ["06-07-2026 10:00","06-07-2026 20:00"],
+  "4015074129": ["06-07-2026 12:00","08-07-2026 00:00"],
+  "4015074136": ["10-07-2026 21:00","11-07-2026 08:00"],
+  "4015377145": ["06-07-2026 18:00","06-07-2026 23:00"],
+  "4015377192": ["07-07-2026 02:00","07-07-2026 16:00"],
+  "4015377288": ["08-07-2026 05:00","08-07-2026 15:00"],
+  "4015377291": ["06-07-2026 15:00","06-07-2026 17:00"],
+  "4016218700": ["09-07-2026 11:00","09-07-2026 17:00"]
+};
+
 async function cargarCaptura(){
   const res = await fetch(CAPTURA_CSV_URL + "&_=" + Date.now());
   const texto = await res.text();
@@ -205,6 +251,8 @@ async function cargarCaptura(){
       if(i<0) i = headers.findIndex(h=>h.includes("actividad") && h!=="tipo actividad");
       return i;
     })(),
+    componente: headers.findIndex(h=>h.includes("componente")),
+    fechaInicio: headers.findIndex(h=>h.includes("fecha inicio")),
     avance: headers.findIndex(h=>h.includes("avance")),
     hrs: headers.findIndex(h=>h.includes("hrs")||h.includes("total")),
     estado: headers.findIndex(h=>h==="estado"),
@@ -218,6 +266,8 @@ async function cargarCaptura(){
     if(!c[idx.equipo] || !c[idx.equipo].trim()) continue;
     filas.push({
       equipo:c[idx.equipo]||"", ot:(c[idx.ot]||"").trim(), actividad:c[idx.actividad]||"",
+      componente: idx.componente>=0 ? (c[idx.componente]||"") : "",
+      fechaInicio: idx.fechaInicio>=0 ? (c[idx.fechaInicio]||"") : "",
       avance:parseAvance(c[idx.avance]),
       hrs:parseNum(c[idx.hrs]), estado:c[idx.estado]||"",
       resp:c[idx.resp]||"", criticidad:c[idx.criticidad]||"",
@@ -257,6 +307,16 @@ async function cargarNFC(){
 }
 
 function norm(s){ return String(s||"").trim().toLowerCase(); }
+
+// Parsea "DD-MM-YYYY HH:mm" (formato de Fecha Inicio en CAPTURA). Devuelve Date o null.
+function parseFechaHoraCL(s){
+  if(!s) return null;
+  const m = String(s).trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if(!m) return null;
+  const d = new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]), parseInt(m[4]), parseInt(m[5]));
+  return isNaN(d) ? null : d;
+}
+const DIAS_SEMANA = ["DOM","LUN","MAR","MIÉ","JUE","VIE","SÁB"];
 
 let certsData = [];
 
@@ -392,23 +452,69 @@ window.abrirModalPersona = abrirModalPersona;
 function nivel(av){ if(av>=100) return "ok"; if(av<50) return "crit"; return "warn"; }
 function colorNivel(nv){ return nv==="ok"?"var(--verde)":(nv==="crit"?"var(--rojo)":"var(--ambar)"); }
 
-function renderSelector(otsUnicas){
-  document.getElementById("tituloOT").textContent = "Selecciona una OT";
-  document.getElementById("subOT").textContent = "Elige qué actividad mostrar en este panel";
-  const cont = document.getElementById("contenido");
-  if(!otsUnicas.length){ cont.innerHTML = '<div class="empty">No hay OTs cargadas en CAPTURA.</div>'; return; }
-  cont.innerHTML = `<div class="selector">` + otsUnicas.map(o=>{
-    let clase, etiqueta;
-    if(o.bloqueado){ clase="pausada"; etiqueta="PAUSADA"; }
-    else if(o.avance>=100){ clase="completada"; etiqueta="COMPLETADA"; }
-    else if(o.avance===0){ clase="sin-iniciar"; etiqueta="SIN INICIAR"; }
-    else { clase="en-proceso"; etiqueta="EN PROCESO"; }
-    return `
+function estadoOT(o){
+  if(o.bloqueado) return {clase:"pausada", etiqueta:"PAUSADA"};
+  if(o.avance>=100) return {clase:"completada", etiqueta:"COMPLETADA"};
+  if(o.avance===0) return {clase:"sin-iniciar", etiqueta:"SIN INICIAR"};
+  return {clase:"en-proceso", etiqueta:"EN PROCESO"};
+}
+
+function tarjetaOT(o){
+  const {clase, etiqueta} = estadoOT(o);
+  return `
     <a class="ot-pick ${clase}" href="?ot=${encodeURIComponent(o.ot)}">
       <div class="n">OT ${o.ot} — ${o.equipo} <span class="ot-tag">${etiqueta}</span></div>
-      <div class="s">${o.actividad} · ${o.avance}%</div>
-    </a>
-  `;}).join("") + `</div>`;
+      <div class="s">${o.actividad}${o.componente ? ' · '+o.componente : ''} · ${o.avance}%</div>
+    </a>`;
+}
+
+function renderSelector(otsUnicas){
+  document.getElementById("tituloOT").textContent = "Selecciona una OT";
+  document.getElementById("subOT").textContent = "Línea de tiempo · Elige qué actividad mostrar en este panel";
+  const cont = document.getElementById("contenido");
+  if(!otsUnicas.length){ cont.innerHTML = '<div class="empty">No hay OTs cargadas en CAPTURA.</div>'; return; }
+
+  const conFecha = otsUnicas.filter(o=>o.fechaInicio).sort((a,b)=>a.fechaInicio-b.fechaInicio);
+  const sinFecha = otsUnicas.filter(o=>!o.fechaInicio);
+
+  // agrupa las que tienen fecha por día calendario
+  const porDia = {};
+  const ordenDias = [];
+  conFecha.forEach(o=>{
+    const key = o.fechaInicio.toDateString();
+    if(!porDia[key]){ porDia[key]=[]; ordenDias.push(key); }
+    porDia[key].push(o);
+  });
+
+  let html = '<div class="selector">';
+
+  if(conFecha.length){
+    html += ordenDias.map(key=>{
+      const items = porDia[key];
+      const d = items[0].fechaInicio;
+      const diaTxt = `${DIAS_SEMANA[d.getDay()]} ${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      return `
+        <div class="dia-header">${diaTxt}</div>
+        ${items.map(o=>{
+          const hh = String(o.fechaInicio.getHours()).padStart(2,"0");
+          const mm = String(o.fechaInicio.getMinutes()).padStart(2,"0");
+          return `
+          <div class="timeline-item">
+            <div class="time-badge">${hh}:${mm}</div>
+            <div class="timeline-card">${tarjetaOT(o)}</div>
+          </div>`;
+        }).join("")}
+      `;
+    }).join("");
+  }
+
+  if(sinFecha.length){
+    html += `<div class="dia-header sin-fecha">SIN FECHA REGISTRADA</div>`;
+    html += sinFecha.map(o=>`<div class="timeline-card sin-hora">${tarjetaOT(o)}</div>`).join("");
+  }
+
+  html += '</div>';
+  cont.innerHTML = html;
 }
 
 function render(actividades, personas){
@@ -534,7 +640,11 @@ async function cargarTodo(){
       const vistas={}, otsUnicas=[];
       captura.forEach(a=>{
         if(!vistas[a.ot]){
-          vistas[a.ot] = { ot:a.ot, equipo:a.equipo, actividad:a.actividad, hrsTotal:0, hrsGanadas:0, bloqueado:"" };
+          const g = GANTT_FECHAS[a.ot];
+          vistas[a.ot] = { ot:a.ot, equipo:a.equipo, actividad:a.actividad, componente:a.componente,
+                            fechaInicio: g ? parseFechaHoraCL(g[0]) : null,
+                            fechaTermino: g ? parseFechaHoraCL(g[1]) : null,
+                            hrsTotal:0, hrsGanadas:0, bloqueado:"" };
           otsUnicas.push(vistas[a.ot]);
         }
         const g = vistas[a.ot];
