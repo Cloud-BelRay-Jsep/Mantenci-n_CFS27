@@ -146,12 +146,19 @@
   .gantt-body{position:relative}
   .gantt-gridline{position:absolute; top:0; bottom:0; width:1px; background:var(--line); opacity:0.5}
   .gantt-bar{
-    position:absolute; height:36px; border-radius:8px; border-left:3px solid; display:flex;
-    flex-direction:column; justify-content:center; padding:2px 8px; overflow:hidden;
-    text-decoration:none; white-space:nowrap; min-width:60px; box-sizing:border-box;
+    position:absolute; border-radius:8px; border-left:3px solid; display:flex;
+    flex-direction:column; justify-content:center; padding:5px 9px; overflow:hidden;
+    text-decoration:none; box-sizing:border-box;
   }
-  .gantt-bar .gb-nombre{font-size:11px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis}
-  .gantt-bar .gb-hora{font-size:9.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis}
+  .gantt-bar .gb-nombre{
+    font-size:10.5px; font-weight:700; color:var(--text); line-height:1.25;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .gantt-bar .gb-actividad{
+    font-size:9.5px; color:var(--text); opacity:0.85; line-height:1.25; margin-top:1px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .gantt-bar .gb-hora{font-size:9px; color:var(--muted); margin-top:2px; white-space:nowrap}
   .gantt-bar.completada{background:var(--verdeBg); border-left-color:var(--verde)}
   .gantt-bar.en-proceso{background:var(--ambarBg); border-left-color:var(--ambar)}
   .gantt-bar.sin-iniciar{background:var(--rojoBg); border-left-color:var(--rojo)}
@@ -586,7 +593,7 @@ function renderVistaGantt(cont){
   let html = toggleHtml() + '<div class="selector">';
 
   if(conFecha.length){
-    const PX_HORA = 10, ALTO_FILA = 40, ANCHO_MIN = 155;
+    const PX_HORA = 10, ALTO_FILA = 82, ANCHO_MIN = 230;
     const minFecha = new Date(Math.min(...conFecha.map(o=>o.fechaInicio)));
     const maxFecha = new Date(Math.max(...conFecha.map(o=>o.fechaTermino)));
     const inicioGrilla = new Date(minFecha.getFullYear(), minFecha.getMonth(), minFecha.getDate());
@@ -615,6 +622,7 @@ function renderVistaGantt(cont){
            title="OT ${o.ot} — ${o.equipo} · ${o.actividad}${o.componente?' · '+o.componente:''} · ${hIni}–${hFin} · ${etiqueta} · ${o.avance}%"
            style="left:${left}px; width:${width}px; top:${i*(ALTO_FILA+6)}px">
           <span class="gb-nombre">OT ${o.ot} — ${o.equipo}</span>
+          <span class="gb-actividad">${o.actividad}${o.componente ? ' · '+o.componente : ''}</span>
           <span class="gb-hora">${hIni}–${hFin} · ${o.avance}%</span>
         </a>`;
     });
