@@ -111,7 +111,16 @@
   .footer{margin-top:24px; text-align:center; font-size:11px; color:var(--dim)}
 
   .selector{max-width:640px; margin:60px auto}
-  .ot-pick{display:block; text-decoration:none; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:10px}
+  .ot-pick{display:block; text-decoration:none; color:var(--text); background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:10px}
+  .ot-pick.completada{border-left-color:var(--verde); background:linear-gradient(90deg, var(--verdeBg) 0%, var(--panel) 12%)}
+  .ot-pick.en-proceso{border-left-color:var(--ambar); background:linear-gradient(90deg, var(--ambarBg) 0%, var(--panel) 12%)}
+  .ot-pick.sin-iniciar{border-left-color:var(--rojo); background:linear-gradient(90deg, var(--rojoBg) 0%, var(--panel) 12%)}
+  .ot-pick.pausada{border-left-color:#5BC8E8; background:linear-gradient(90deg, rgba(91,200,232,0.15) 0%, var(--panel) 12%)}
+  .ot-tag{font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-left:8px; vertical-align:middle}
+  .ot-pick.completada .ot-tag{background:var(--verdeBg); color:var(--verde)}
+  .ot-pick.en-proceso .ot-tag{background:var(--ambarBg); color:var(--ambar)}
+  .ot-pick.sin-iniciar .ot-tag{background:var(--rojoBg); color:var(--rojo)}
+  .ot-pick.pausada .ot-tag{background:rgba(91,200,232,0.18); color:#5BC8E8}
   .ot-pick:hover{border-color:var(--acento)}
   .ot-pick .n{font-size:16px; font-weight:600}
   .ot-pick .s{font-size:12px; color:var(--muted); margin-top:2px}
@@ -387,12 +396,18 @@ function renderSelector(otsUnicas){
   document.getElementById("subOT").textContent = "Elige qué actividad mostrar en este panel";
   const cont = document.getElementById("contenido");
   if(!otsUnicas.length){ cont.innerHTML = '<div class="empty">No hay OTs cargadas en CAPTURA.</div>'; return; }
-  cont.innerHTML = `<div class="selector">` + otsUnicas.map(o=>`
-    <a class="ot-pick" href="?ot=${encodeURIComponent(o.ot)}">
-      <div class="n">OT ${o.ot} — ${o.equipo}</div>
+  cont.innerHTML = `<div class="selector">` + otsUnicas.map(o=>{
+    let clase, etiqueta;
+    if(o.bloqueado){ clase="pausada"; etiqueta="PAUSADA"; }
+    else if(o.avance>=100){ clase="completada"; etiqueta="COMPLETADA"; }
+    else if(o.avance===0){ clase="sin-iniciar"; etiqueta="SIN INICIAR"; }
+    else { clase="en-proceso"; etiqueta="EN PROCESO"; }
+    return `
+    <a class="ot-pick ${clase}" href="?ot=${encodeURIComponent(o.ot)}">
+      <div class="n">OT ${o.ot} — ${o.equipo} <span class="ot-tag">${etiqueta}</span></div>
       <div class="s">${o.actividad} · ${o.avance}%</div>
     </a>
-  `).join("") + `</div>`;
+  `;}).join("") + `</div>`;
 }
 
 function render(actividades, personas){
@@ -517,9 +532,16 @@ async function cargarTodo(){
     if(!OT_SELECCIONADA){
       const vistas={}, otsUnicas=[];
       captura.forEach(a=>{
-        if(vistas[a.ot]) return; vistas[a.ot]=true;
-        otsUnicas.push(a);
+        if(!vistas[a.ot]){
+          vistas[a.ot] = { ot:a.ot, equipo:a.equipo, actividad:a.actividad, hrsTotal:0, hrsGanadas:0, bloqueado:"" };
+          otsUnicas.push(vistas[a.ot]);
+        }
+        const g = vistas[a.ot];
+        g.hrsTotal += a.hrs;
+        g.hrsGanadas += a.hrs * a.avance / 100;
+        if(a.bloqueado && !g.bloqueado) g.bloqueado = a.bloqueado;
       });
+      otsUnicas.forEach(o=>{ o.avance = o.hrsTotal>0 ? Math.round(o.hrsGanadas/o.hrsTotal*100) : 0; });
       renderSelector(otsUnicas);
       huboRenderExitoso = true;
       actualizarFooter("selector de OT");
