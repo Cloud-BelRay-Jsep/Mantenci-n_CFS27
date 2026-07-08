@@ -50,6 +50,11 @@
   .hstat .v{font-size:20px; font-weight:700}
   .hstat .l{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px}
   .pill-estado{display:inline-block; margin-top:14px; font-size:12px; font-weight:700; padding:5px 14px; border-radius:20px}
+  .btn-docs-terreno{
+    display:block; margin:10px auto 0; background:var(--panel2); border:1px solid var(--line);
+    color:var(--text); font-size:12px; padding:8px 16px; border-radius:20px; cursor:pointer; font-family:inherit;
+  }
+  .btn-docs-terreno:hover{border-color:var(--acento); color:var(--acento)}
 
   .metrics{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:16px}
   .metric{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px}
@@ -217,6 +222,7 @@ const CAPTURA_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA3xg
 const NFC_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA3xg-NepBQFQy3QwQoRINx_AIP_-_ie2Clpq0lLLe56Fm1FokEW4A5VwTwiY13nYtXsBJQKde8wM/pub?gid=545760247&single=true&output=csv";
 // Publica la pestaña CERTIFICACIONES igual que las otras (Archivo > Compartir > Publicar en la web > CSV) y pega su link aquí:
 const CERTS_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA3xg-NepBQFQy3QwQoRINx_AIP_-_ie2Clpq0lLLe56Fm1FokEW4A5VwTwiY13nYtXsBJQKde8wM/pub?gid=1733484865&single=true&output=csv";
+const DOCS_TERRENO_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA3xg-NepBQFQy3QwQoRINx_AIP_-_ie2Clpq0lLLe56Fm1FokEW4A5VwTwiY13nYtXsBJQKde8wM/pub?gid=2126357148&single=true&output=csv";
 const REFRESH_MS = 20000;
 
 const params = new URLSearchParams(window.location.search);
@@ -436,9 +442,17 @@ function formatFecha(d){
 }
 function parseFechaFlexible(s){
   if(!s) return null;
-  let d = new Date(s); // maneja ISO 8601 nativo ("2025-03-06T03:00:00.000Z")
+  const txt = String(s).trim();
+  // "DD-MM-YYYY" (sin hora) es ambiguo para el parser nativo de JS (lo confunde con MM-DD-YYYY
+  // al estilo estadounidense) — lo interpretamos SIEMPRE como fecha chilena primero.
+  const soloFecha = txt.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if(soloFecha){
+    const d = new Date(parseInt(soloFecha[3]), parseInt(soloFecha[2])-1, parseInt(soloFecha[1]));
+    if(!isNaN(d)) return d;
+  }
+  let d = new Date(txt); // ISO 8601 nativo ("2025-03-06T03:00:00.000Z") u otros formatos con hora
   if(!isNaN(d)) return d;
-  const p = String(s).split("-"); // fallback dd-mm-yyyy
+  const p = txt.split("-"); // último respaldo dd-mm-yyyy
   if(p.length===3){ d = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0])); if(!isNaN(d)) return d; }
   return null;
 }
@@ -452,6 +466,112 @@ function estadoCert(vencStr){
   if(dias<=30) return {txt:"POR VENCER", col:"var(--ambar)", bg:"var(--ambarBg)"};
   return {txt:"VIGENTE", col:"var(--verde)", bg:"var(--verdeBg)"};
 }
+
+async function cargarDocsTerreno(){
+  if(!DOCS_TERRENO_CSV_URL) return [];
+  try{
+    const res = await fetch(DOCS_TERRENO_CSV_URL + "&_=" + Date.now());
+    const texto = await res.text();
+    const lineas = texto.split("\n").filter(l=>l.trim());
+    if(!lineas.length) return [];
+    let hIdx = 0;
+    for(let i=0;i<Math.min(5,lineas.length);i++){
+      const cols = parseLinea(lineas[i]).map(c=>c.trim().toLowerCase());
+      if(cols.some(c=>c==="ot")){ hIdx = i; break; }
+    }
+    const headers = parseLinea(lineas[hIdx]).map(h=>h.trim().toLowerCase());
+    function col(nombres){
+      for(const n of nombres){ const i = headers.indexOf(n); if(i>=0) return i; }
+      return -1;
+    }
+    const idx = {
+      ot: col(["ot"]),
+      equipo: col(["equipo"]),
+      tarea: col(["task_name","tarea","actividad"]),
+      link: col(["documentos_terreno","link","url"]),
+      fecha: col(["fecha"]),
+      turno: col(["turno"]),
+    };
+    const filas = [];
+    for(let i=hIdx+1;i<lineas.length;i++){
+      const c = parseLinea(lineas[i]);
+      if(!c[idx.ot] || !c[idx.ot].trim()) continue;
+      filas.push({
+        ot: c[idx.ot].trim(), equipo: idx.equipo>=0?(c[idx.equipo]||""):"",
+        tarea: idx.tarea>=0?(c[idx.tarea]||""):"",
+        link: idx.link>=0?(c[idx.link]||""):"",
+        fecha: idx.fecha>=0?(c[idx.fecha]||""):"",
+        turno: idx.turno>=0?(c[idx.turno]||""):"",
+      });
+    }
+    return filas;
+  }catch(e){ return []; }
+}
+
+function abrirModalDocsTerreno(){
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-top">
+        <div>
+          <div class="modal-nombre">Documentación de Terreno</div>
+          <div class="modal-cargo">OT ${OT_SELECCIONADA}</div>
+        </div>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div id="docsTerrenoBody"><div class="empty">Cargando…</div></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  cargarDocsTerreno().then(docs=>{
+    const filtrados = docs.filter(d=>d.ot===OT_SELECCIONADA);
+    const cuerpo = document.getElementById("docsTerrenoBody");
+    if(!cuerpo) return; // el modal se cerró antes de que terminara de cargar
+    if(!DOCS_TERRENO_CSV_URL){
+      cuerpo.innerHTML = '<div class="empty">Aún no está configurada la hoja de documentación de terreno.</div>';
+      return;
+    }
+    if(!filtrados.length){
+      cuerpo.innerHTML = '<div class="empty">Sin documentación de terreno registrada para esta OT.</div>';
+      return;
+    }
+    // agrupa por fecha + turno (el turno ya viene como texto desde la hoja)
+    const grupos = {}, orden = [];
+    filtrados.forEach(d=>{
+      const key = (d.fecha||"—") + "|" + (d.turno||"—");
+      if(!grupos[key]){ grupos[key] = { fecha:d.fecha, turno:d.turno, items:[] }; orden.push(key); }
+      grupos[key].items.push(d);
+    });
+    // ordena por fecha descendente (más reciente primero)
+    orden.sort((ka,kb)=>{
+      const fa = parseFechaFlexible(grupos[ka].fecha), fb = parseFechaFlexible(grupos[kb].fecha);
+      if(!fa && !fb) return 0;
+      if(!fa) return 1;
+      if(!fb) return -1;
+      return fb-fa;
+    });
+    cuerpo.innerHTML = orden.map(key=>{
+      const g = grupos[key];
+      const esNoche = String(g.turno).toLowerCase().includes("noche");
+      const icono = esNoche ? "🌙" : "☀️";
+      const fFmt = formatFecha(parseFechaFlexible(g.fecha)) || g.fecha || "Sin fecha";
+      const encabezado = `${icono} ${fFmt} · ${g.turno||"—"}`;
+      const items = g.items.map(d=>`
+        <div class="cert-row">
+          <div class="cert-top">
+            <span class="cert-nombre">${d.tarea||"Documento"}</span>
+          </div>
+          ${d.equipo ? `<div class="cert-fecha">${d.equipo}</div>` : ""}
+          ${d.link ? `<a class="cert-link" href="${d.link}" target="_blank" rel="noopener">Ver / descargar documento →</a>` : ""}
+        </div>`).join("");
+      return `<div class="turno-header">${encabezado}</div>${items}`;
+    }).join("");
+  });
+}
+window.abrirModalDocsTerreno = abrirModalDocsTerreno;
 
 function abrirModalPersona(persona){
   const certs = certsData.filter(c=>personaCoincide(persona, c.persona));
@@ -726,6 +846,7 @@ function render(actividades, personas){
             </div>
           </div>
           <span class="pill-estado" style="background:${estadoBg};color:${col}">${estadoTxt}</span>
+          <button class="btn-docs-terreno" onclick="abrirModalDocsTerreno()">📋 Documentación de Terreno</button>
           <div class="hero-stats">
             <div class="hstat"><div class="v">${actividades.length}</div><div class="l">Actividades</div></div>
             <div class="hstat"><div class="v">${completas}/${actividades.length}</div><div class="l">Completadas</div></div>
@@ -759,7 +880,7 @@ function render(actividades, personas){
               </div>
               <span class="act-pct" style="color:${c}">${a.avance}%</span>
             </div>
-            ${a.resp ? `<div class="act-resp">${a.resp}</div>` : ""}
+            ${(a.componente || a.resp) ? `<div class="act-resp">${[a.componente, a.resp].filter(Boolean).join(" · ")}</div>` : ""}
             <div class="bar" style="margin-top:6px"><div class="bar-fill fill-${n}" style="width:${a.avance}%"></div></div>
             ${a.bloqueado ? `<div style="margin-top:6px;font-size:11px;color:var(--ambar)">⚠ ${a.bloqueado}</div>` : ""}
           </div>`;
