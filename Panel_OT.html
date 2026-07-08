@@ -295,6 +295,7 @@ async function cargarCaptura(){
       return i;
     })(),
     componente: headers.findIndex(h=>h.includes("componente")),
+    orden: headers.findIndex(h=>h==="orden"),
     fechaInicio: headers.findIndex(h=>h.includes("fecha inicio")),
     avance: headers.findIndex(h=>h.includes("avance")),
     hrs: headers.findIndex(h=>h.includes("hrs")||h.includes("total")),
@@ -310,6 +311,7 @@ async function cargarCaptura(){
     filas.push({
       equipo:c[idx.equipo]||"", ot:(c[idx.ot]||"").trim(), actividad:c[idx.actividad]||"",
       componente: idx.componente>=0 ? (c[idx.componente]||"") : "",
+      orden: idx.orden>=0 ? parseNum(c[idx.orden]) : 999999,
       fechaInicio: idx.fechaInicio>=0 ? (c[idx.fechaInicio]||"") : "",
       avance:parseAvance(c[idx.avance]),
       hrs:parseNum(c[idx.hrs]), estado:c[idx.estado]||"",
@@ -652,6 +654,7 @@ function renderVistaGantt(cont){
 }
 
 function render(actividades, personas){
+  actividades = actividades.slice().sort((a,b)=>a.orden-b.orden);
   const eq = actividades[0].equipo;
   document.getElementById("tituloOT").textContent = "OT " + OT_SELECCIONADA;
   document.getElementById("subOT").textContent = eq + " · Anglo American Los Bronces";
