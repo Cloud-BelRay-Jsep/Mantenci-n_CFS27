@@ -68,6 +68,11 @@
   .fill-ok{background:var(--verde)} .fill-warn{background:var(--ambar)} .fill-crit{background:var(--rojo)}
   .act-pill{font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:12px; margin-left:6px}
 
+  .turno-header{
+    font-size:11.5px; font-weight:700; color:var(--acento); text-transform:uppercase; letter-spacing:0.5px;
+    margin:14px 0 8px; padding-bottom:5px; border-bottom:1px solid var(--line);
+  }
+  .turno-header:first-child{margin-top:0}
   .persona-row{display:flex; flex-direction:column; gap:6px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-bottom:7px}
   .persona-row.activo{border-color:var(--verde)}
   .p-head{display:flex; align-items:center; gap:8px}
@@ -495,6 +500,25 @@ function abrirModalPersona(persona){
 window.abrirModalPersona = abrirModalPersona;
 
 function nivel(av){ if(av>=100) return "ok"; if(av<50) return "crit"; return "warn"; }
+
+// Clasifica una entrada en Turno Día (08:00–20:29) o Turno Noche (20:30–07:59).
+// El turno noche que cruza medianoche se agrupa bajo la fecha en que EMPEZÓ.
+function clasificarTurno(fechaStr, horaStr){
+  if(!fechaStr || !horaStr) return null;
+  const [dd,mm,yyyy] = fechaStr.split("-").map(Number);
+  const [hh,mi] = horaStr.split(":").map(Number);
+  if(isNaN(dd)||isNaN(mm)||isNaN(yyyy)||isNaN(hh)||isNaN(mi)) return null;
+  const horaDec = hh + mi/60;
+  let esNoche, fechaTurno;
+  if(horaDec >= 20.5){
+    esNoche = true; fechaTurno = new Date(yyyy, mm-1, dd);
+  } else if(horaDec < 8){
+    esNoche = true; fechaTurno = new Date(yyyy, mm-1, dd-1);
+  } else {
+    esNoche = false; fechaTurno = new Date(yyyy, mm-1, dd);
+  }
+  return { esNoche, fechaTurno };
+}
 function colorNivel(nv){ return nv==="ok"?"var(--verde)":(nv==="crit"?"var(--rojo)":"var(--ambar)"); }
 
 function estadoOT(o){
@@ -747,19 +771,52 @@ function render(actividades, personas){
         <div class="section-title">Personas en el punto</div>
         <div class="col-scroll">
         ${personasOT.length===0 ? '<div class="empty">Nadie ha registrado entrada en esta OT todavía.</div>' :
-          personasOT.map(p=>`
-          <div class="persona-row ${p.estado==='en terreno'?'activo':''}">
-            <div class="p-head">
-              <span class="p-dot ${p.estado==='en terreno'?'on':'off'}"></span>
-              <span class="p-nombre" onclick='abrirModalPersona(${JSON.stringify(p.persona)})'>${p.persona}</span>
-              ${p.dur ? `<span class="p-dur">${p.dur}</span>` : ""}
-            </div>
-            <span class="p-horas">
-              <span class="h-in">▼ ${p.hEnt||'—'}</span>
-              <span class="h-out">${p.hSal ? '▲ '+p.hSal : (p.estado==='en terreno'?'En terreno':'—')}</span>
-            </span>
-          </div>
-        `).join("")}
+          (function(){
+            // agrupa por (fecha de turno + día/noche)
+            const grupos = {}, ordenGrupos = [];
+            personasOT.forEach(p=>{
+              const clas = clasificarTurno(p.fecha, p.hEnt);
+              const key = clas ? clas.fechaTurno.toDateString()+(clas.esNoche?'N':'D') : 'sin-fecha';
+              if(!grupos[key]){ grupos[key] = { clas, items: [] }; ordenGrupos.push(key); }
+              grupos[key].items.push(p);
+            });
+            // ordena grupos: más reciente primero (por fecha de turno, noche después del día del mismo día)
+            ordenGrupos.sort((ka,kb)=>{
+              const ga=grupos[ka].clas, gb=grupos[kb].clas;
+              if(!ga && !gb) return 0;
+              if(!ga) return 1;
+              if(!gb) return -1;
+              const ta = ga.fechaTurno.getTime() + (ga.esNoche?0.5:0);
+              const tb = gb.fechaTurno.getTime() + (gb.esNoche?0.5:0);
+              return tb-ta;
+            });
+            return ordenGrupos.map(key=>{
+              const g = grupos[key];
+              let encabezado;
+              if(g.clas){
+                const d = g.clas.fechaTurno;
+                const diaTxt = `${DIAS_SEMANA[d.getDay()]} ${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}`;
+                const icono = g.clas.esNoche ? "🌙" : "☀️";
+                const turnoTxt = g.clas.esNoche ? "Turno Noche" : "Turno Día";
+                encabezado = `${icono} ${diaTxt} · ${turnoTxt}`;
+              } else {
+                encabezado = "Sin fecha registrada";
+              }
+              const filas = g.items.map(p=>`
+                <div class="persona-row ${p.estado==='en terreno'?'activo':''}">
+                  <div class="p-head">
+                    <span class="p-dot ${p.estado==='en terreno'?'on':'off'}"></span>
+                    <span class="p-nombre" onclick='abrirModalPersona(${JSON.stringify(p.persona)})'>${p.persona}</span>
+                    ${p.dur ? `<span class="p-dur">${p.dur}</span>` : ""}
+                  </div>
+                  <span class="p-horas">
+                    <span class="h-in">▼ ${p.hEnt||'—'}</span>
+                    <span class="h-out">${p.hSal ? '▲ '+p.hSal : (p.estado==='en terreno'?'En terreno':'—')}</span>
+                  </span>
+                </div>`).join("");
+              return `<div class="turno-header">${encabezado}</div>${filas}`;
+            }).join("");
+          })()}
         </div>
       </div>
     </div>
@@ -828,4 +885,4 @@ tick(); setInterval(tick,1000);
 cargarTodo(); setInterval(cargarTodo, REFRESH_MS);
 </script>
 </body>
-</html>
+</html> 
